@@ -1,8 +1,9 @@
 package com.deepflow.settlementsystem.auth;
 
+import com.deepflow.settlementsystem.common.code.ApiResponseCode;
+import com.deepflow.settlementsystem.common.dto.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,20 +17,24 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(
+    public ResponseEntity<ApiResponse<LoginResponse>> login(
             @RequestBody @Valid LoginRequest request
     ) {
         LoginResponse response = authService.login(request);
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                new ApiResponse<>(ApiResponseCode.OK, response)
+        );
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<Void> signUp(
+    public ResponseEntity<ApiResponse<Void>> signUp(
             @RequestBody @Valid SignUpRequest request
     ) {
         authService.signUp(request);
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(
+                new ApiResponse<>(ApiResponseCode.OK, null)
+        );
     }
 }

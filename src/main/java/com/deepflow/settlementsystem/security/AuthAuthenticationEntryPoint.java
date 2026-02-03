@@ -1,5 +1,7 @@
 package com.deepflow.settlementsystem.security;
 
+import com.deepflow.settlementsystem.common.code.ErrorCode;
+import com.deepflow.settlementsystem.common.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +29,9 @@ public class AuthAuthenticationEntryPoint implements AuthenticationEntryPoint {
         log.error("errorCode : {}, uri : {}, message : {}",
                 authException, request.getRequestURI(), authException.getMessage());
 
-        String responseBody = objectMapper.writeValueAsString("자격 증명에 실패했습니다.");
+        String responseBody = objectMapper.writeValueAsString(
+                new ErrorResponse(ErrorCode.UNAUTHORIZED)
+        );
 
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
