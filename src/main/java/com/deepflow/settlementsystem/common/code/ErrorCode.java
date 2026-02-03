@@ -1,4 +1,4 @@
-package com.deepflow.settlementsystem.common.exception;
+package com.deepflow.settlementsystem.common.code;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatus;
 
 @Getter
 @AllArgsConstructor
-public enum ErrorMessage {
+public enum ErrorCode {
     // 404 Not Found
     USER_NOT_FOUND("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 

@@ -1,7 +1,7 @@
 package com.deepflow.settlementsystem.auth;
 
 import com.deepflow.settlementsystem.common.exception.CustomException;
-import com.deepflow.settlementsystem.common.exception.ErrorMessage;
+import com.deepflow.settlementsystem.common.code.ErrorCode;
 import com.deepflow.settlementsystem.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -36,7 +36,7 @@ public class AuthService {
     public void signUp(SignUpRequest request) {
         userRepository.findByUsername(request.getUsername())
                 .ifPresent(user -> {
-                            throw new CustomException(ErrorMessage.DUPLICATE_USER);
+                            throw new CustomException(ErrorCode.DUPLICATE_USER);
                         }
                 );
 
