@@ -2,6 +2,7 @@ package com.deepflow.settlementsystem.group.service;
 
 import com.deepflow.settlementsystem.group.dto.request.GroupCreateRequest;
 import com.deepflow.settlementsystem.group.dto.request.RoomJoinRequest;
+import com.deepflow.settlementsystem.group.dto.response.FriendInviteResponse;
 import com.deepflow.settlementsystem.group.dto.response.GroupDetailResponse;
 import com.deepflow.settlementsystem.group.dto.response.GroupResponse;
 import com.deepflow.settlementsystem.group.dto.response.MemberResponse;
@@ -12,11 +13,16 @@ import com.deepflow.settlementsystem.group.entity.Room;
 import com.deepflow.settlementsystem.group.repository.GroupRepository;
 import com.deepflow.settlementsystem.group.repository.MemberRepository;
 import com.deepflow.settlementsystem.group.repository.RoomRepository;
+import com.deepflow.settlementsystem.kakao.dto.response.KakaoFriendResponse;
+import com.deepflow.settlementsystem.kakao.service.KakaoService;
+import com.deepflow.settlementsystem.user.entity.User;
+import com.deepflow.settlementsystem.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,6 +34,8 @@ public class GroupService {
     private final GroupRepository groupRepository;
     private final RoomRepository roomRepository;
     private final MemberRepository memberRepository;
+    private final UserRepository userRepository;
+    private final KakaoService kakaoService;
 
     @Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
@@ -149,6 +157,61 @@ public class GroupService {
                 .inviteLink(generateInviteLink(room.getInviteCode()))
                 .createdAt(group.getCreatedAt())
                 .updatedAt(group.getUpdatedAt())
+                .build();
+    }
+
+    public List<KakaoFriendResponse> getFriends(Long userId) {
+        return kakaoService.getFriends(userId);
+    }
+
+    @Transactional
+    public FriendInviteResponse inviteFriends(Long groupId, List<String> friendUuids, Long inviterUserId) {
+        Group group = groupRepository.findByIdWithRoom(groupId)
+                .orElseThrow(() -> new IllegalArgumentException("그룹을 찾을 수 없습니다."));
+
+        // 초대하는 사람이 그룹 멤버인지 확인
+        boolean isMember = memberRepository.existsByRoomIdAndUserId(group.getRoom().getId(), inviterUserId);
+        if (!isMember) {
+            throw new IllegalArgumentException("해당 그룹의 멤버가 아닙니다.");
+        }
+
+        List<FriendInviteResponse.InvitedFriend> invitedFriends = new ArrayList<>();
+        List<String> notFoundFriends = new ArrayList<>();
+
+        for (String friendUuid : friendUuids) {
+            // 카카오 UUID로 User 조회
+            User user = userRepository.findByKakaoUuid(friendUuid)
+                    .orElse(null);
+
+            if (user == null) {
+                notFoundFriends.add(friendUuid);
+                continue;
+            }
+
+            // 이미 멤버인지 확인
+            if (memberRepository.existsByRoomIdAndUserId(group.getRoom().getId(), user.getId())) {
+                continue; // 이미 멤버면 스킵
+            }
+
+            // 멤버 추가
+            Member member = Member.builder()
+                    .room(group.getRoom())
+                    .userId(user.getId())
+                    .build();
+            memberRepository.save(member);
+
+            invitedFriends.add(FriendInviteResponse.InvitedFriend.builder()
+                    .userId(user.getId())
+                    .kakaoUuid(friendUuid)
+                    .name(user.getName())
+                    .build());
+        }
+
+        return FriendInviteResponse.builder()
+                .groupId(group.getId())
+                .groupName(group.getName())
+                .invitedFriends(invitedFriends)
+                .notFoundFriends(notFoundFriends)
                 .build();
     }
 

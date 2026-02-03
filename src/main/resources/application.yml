@@ -4,3 +4,7 @@ spring:
 
 app:
   base-url: http://localhost:8080
+
+kakao:
+  rest-api-key: ${KAKAO_REST_API_KEY:your-rest-api-key-here}
+  api-base-url: https://kapi.kakao.com

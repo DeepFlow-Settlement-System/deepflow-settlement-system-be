@@ -1,10 +1,13 @@
 package com.deepflow.settlementsystem.group.controller;
 
 import com.deepflow.settlementsystem.group.dto.request.GroupCreateRequest;
+import com.deepflow.settlementsystem.group.dto.request.InviteFriendRequest;
 import com.deepflow.settlementsystem.group.dto.request.RoomJoinRequest;
+import com.deepflow.settlementsystem.group.dto.response.FriendInviteResponse;
 import com.deepflow.settlementsystem.group.dto.response.GroupDetailResponse;
 import com.deepflow.settlementsystem.group.dto.response.GroupResponse;
 import com.deepflow.settlementsystem.group.dto.response.RoomJoinResponse;
+import com.deepflow.settlementsystem.kakao.dto.response.KakaoFriendResponse;
 import com.deepflow.settlementsystem.group.service.GroupService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +61,23 @@ public class GroupController {
             @Valid @RequestBody RoomJoinRequest request,
             @AuthenticationPrincipal Long userId) {
         RoomJoinResponse response = groupService.joinRoom(request, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/friends")
+    public ResponseEntity<List<KakaoFriendResponse>> getFriends(
+            @AuthenticationPrincipal Long userId) {
+        List<KakaoFriendResponse> friends = groupService.getFriends(userId);
+        return ResponseEntity.ok(friends);
+    }
+
+    @PostMapping("/{groupId}/invite")
+    public ResponseEntity<FriendInviteResponse> inviteFriends(
+            @PathVariable Long groupId,
+            @Valid @RequestBody InviteFriendRequest request,
+            @AuthenticationPrincipal Long userId) {
+        FriendInviteResponse response = groupService.inviteFriends(
+                groupId, request.getFriendUuids(), userId);
         return ResponseEntity.ok(response);
     }
 }
