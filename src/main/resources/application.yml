@@ -36,5 +36,6 @@ logging:
     com.deepflow.settlementsystem: DEBUG
 
 kakao:
-  rest-api-key: ${KAKAO_REST_API_KEY:360c502e85ac2eef950fdc5a7a083092}
-  api-base-url: https://kapi.kakao.com
+  rest-api-key: ${REST_API_KEY}
+  redirect-url: ${REDIRECT_URI}
+  client-secret: ${CLIENT_SECRET}

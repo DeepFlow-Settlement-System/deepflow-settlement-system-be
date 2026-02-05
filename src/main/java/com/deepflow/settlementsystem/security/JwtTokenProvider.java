@@ -1,5 +1,6 @@
 package com.deepflow.settlementsystem.security;
 
+import com.deepflow.settlementsystem.user.entity.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -39,12 +40,12 @@ public class JwtTokenProvider {
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String createToken(Authentication auth) {
+    public String createToken(User user) {
         long now = (new Date()).getTime();
         Date validity = new Date(now + this.tokenValidityInMilliseconds);
 
         return Jwts.builder()
-                .subject(auth.getName())
+                .subject(user.getUsername())
                 .signWith(key)
                 .expiration(validity)
                 .compact();

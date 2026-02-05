@@ -1,4 +1,4 @@
-package com.deepflow.settlementsystem.common.exception;
+package com.deepflow.settlementsystem.common.code;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatus;
 
 @Getter
 @AllArgsConstructor
-public enum ErrorMessage {
+public enum ErrorCode {
     // 404 Not Found
     USER_NOT_FOUND("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     GROUP_NOT_FOUND("그룹을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
@@ -35,7 +35,11 @@ public enum ErrorMessage {
     NO_ACCESS_PERMISSION("해당 그룹에 접근할 권한이 없습니다.", HttpStatus.FORBIDDEN),
 
     // 409 Conflict
-    DUPLICATE_USER("이미 존재하는 사용자입니다.", HttpStatus.CONFLICT);
+    DUPLICATE_USER("이미 존재하는 사용자입니다.", HttpStatus.CONFLICT),
+
+    // 50x
+    INTERNAL_SERVER_ERROR("서버 내부에 문제가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+    EXTERNAL_SERVER_ERROR("외부 서버에 문제가 발생했습니다.", HttpStatus.BAD_REQUEST);
 
     private final String message;
     private final HttpStatus httpStatus;
