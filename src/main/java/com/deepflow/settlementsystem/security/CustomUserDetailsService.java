@@ -1,6 +1,6 @@
 package com.deepflow.settlementsystem.security;
 
-import com.deepflow.settlementsystem.auth.UserRepository;
+import com.deepflow.settlementsystem.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.security.core.userdetails.UserDetails;

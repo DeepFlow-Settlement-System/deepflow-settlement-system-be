@@ -30,3 +30,8 @@ logging:
     org.springframework.messaging: DEBUG
     org.springframework.web.socket: DEBUG
     com.deepflow.settlementsystem: DEBUG
+
+kakao:
+  rest-api-key: ${REST_API_KEY}
+  redirect-url: ${REDIRECT_URI}
+  client-secret: ${CLIENT_SECRET}

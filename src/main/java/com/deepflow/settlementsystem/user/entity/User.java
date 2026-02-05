@@ -1,4 +1,4 @@
-package com.deepflow.settlementsystem.auth;
+package com.deepflow.settlementsystem.user.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
@@ -21,8 +21,14 @@ public class User implements UserDetails {
     @Column(name = "id", nullable = false)
     private Long id;
 
+    @Column(name = "kakaoId", unique = true)
+    private Long kakaoId;
+
     @Column(name = "username", nullable = false, unique = true)
     private String username;
+
+    @Column(name = "nickname", nullable = false, unique = true)
+    private String nickname;
 
     @Column(name = "password", nullable = false)
     @JsonIgnore
