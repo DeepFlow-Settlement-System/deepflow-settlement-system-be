@@ -11,9 +11,9 @@ import java.util.List;
 @NoArgsConstructor
 public class SettlementMessageRequest {
 
-    @NotNull(message = "방 ID는 필수입니다.")
+    @NotNull
     private Long roomId;
 
-    @NotEmpty(message = "메시지를 받을 사용자 ID 목록은 필수입니다.")
+    @NotEmpty
     private List<Long> receiverUserIds; // 메시지를 받을 사용자 ID 목록
 }
