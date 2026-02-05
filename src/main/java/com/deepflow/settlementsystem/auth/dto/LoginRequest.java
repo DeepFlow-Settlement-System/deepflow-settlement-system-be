@@ -1,4 +1,4 @@
-package com.deepflow.settlementsystem.auth;
+package com.deepflow.settlementsystem.auth.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class LoginResponse {
-    private String accessToken;
+public class LoginRequest {
+    private String username;
+    private String password;
 }

@@ -23,7 +23,11 @@ public enum ErrorCode {
     // 403 Forbidden
 
     // 409 Conflict
-    DUPLICATE_USER("이미 존재하는 사용자입니다.", HttpStatus.CONFLICT);
+    DUPLICATE_USER("이미 존재하는 사용자입니다.", HttpStatus.CONFLICT),
+
+    // 50x
+    INTERNAL_SERVER_ERROR("서버 내부에 문제가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+    EXTERNAL_SERVER_ERROR("외부 서버에 문제가 발생했습니다.", HttpStatus.BAD_REQUEST);
 
     private final String message;
     private final HttpStatus httpStatus;
