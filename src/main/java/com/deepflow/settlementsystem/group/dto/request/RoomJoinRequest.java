@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class RoomJoinRequest {
 
-    @NotBlank(message = "초대 코드는 필수입니다.")
+    @NotBlank
     private String inviteCode;
 }

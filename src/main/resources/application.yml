@@ -15,6 +15,10 @@ spring:
   application:
     name: settlement-system
 
+app:
+  base-url: https://t2.mobidic.shop
+  timezone: Asia/Seoul
+
 server:
   port: 8080
 
@@ -32,5 +36,5 @@ logging:
     com.deepflow.settlementsystem: DEBUG
 
 kakao:
-  rest-api-key: ${KAKAO_REST_API_KEY:your-rest-api-key-here}
+  rest-api-key: ${KAKAO_REST_API_KEY:360c502e85ac2eef950fdc5a7a083092}
   api-base-url: https://kapi.kakao.com

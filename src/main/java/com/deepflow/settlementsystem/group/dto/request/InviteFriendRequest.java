@@ -10,6 +10,6 @@ import java.util.List;
 @NoArgsConstructor
 public class InviteFriendRequest {
 
-    @NotEmpty(message = "초대할 친구 UUID 목록은 필수입니다.")
+    @NotEmpty
     private List<String> friendUuids; // 카카오 친구 UUID 목록
 }
