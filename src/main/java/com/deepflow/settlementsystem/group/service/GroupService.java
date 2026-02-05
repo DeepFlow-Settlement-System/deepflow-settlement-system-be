@@ -10,6 +10,7 @@ import com.deepflow.settlementsystem.group.entity.Room;
 import com.deepflow.settlementsystem.group.repository.GroupRepository;
 import com.deepflow.settlementsystem.group.repository.MemberRepository;
 import com.deepflow.settlementsystem.group.repository.RoomRepository;
+import com.deepflow.settlementsystem.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -31,7 +32,7 @@ public class GroupService {
     private String baseUrl;
 
     @Transactional
-    public GroupResponse createGroup(GroupCreateRequest request, Long userId) {
+    public GroupResponse createGroup(GroupCreateRequest request, User user) {
         // 그룹 생성
         Group group = Group.builder()
                 .name(request.getName())
@@ -50,26 +51,26 @@ public class GroupService {
         // 첫 번째 멤버로 추가
         Member firstMember = Member.builder()
                 .room(room)
-                .userId(userId)
+                .user(user)
                 .build();
         memberRepository.save(firstMember);
 
         return toGroupResponse(group, room);
     }
 
-    public List<GroupResponse> getMyGroups(Long userId) {
-        List<Group> groups = groupRepository.findAllByUserId(userId);
+    public List<GroupResponse> getMyGroups(User user) {
+        List<Group> groups = groupRepository.findAllByUserId(user.getId());
         return groups.stream()
                 .map(group -> toGroupResponse(group, group.getRoom()))
                 .collect(Collectors.toList());
     }
 
-    public GroupDetailResponse getGroupDetail(Long groupId, Long userId) {
+    public GroupDetailResponse getGroupDetail(Long groupId, User user) {
         Group group = groupRepository.findByIdWithRoom(groupId)
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
 
         // 사용자가 해당 그룹의 멤버인지 확인
-        boolean isMember = memberRepository.existsByRoomIdAndUserId(group.getRoom().getId(), userId);
+        boolean isMember = memberRepository.existsByRoomIdAndUserId(group.getRoom().getId(), user.getId());
         if (!isMember) {
             throw new CustomException(ErrorCode.NO_ACCESS_PERMISSION);
         }
@@ -79,7 +80,7 @@ public class GroupService {
         List<MemberResponse> memberResponses = members.stream()
                 .map(member -> MemberResponse.builder()
                         .id(member.getId())
-                        .userId(member.getUserId())
+                        .userId(member.getUser().getId())
                         .joinedAt(member.getJoinedAt())
                         .build())
                 .collect(Collectors.toList());
@@ -96,12 +97,12 @@ public class GroupService {
                 .build();
     }
 
-    public InviteCodeResponse getInviteCode(Long groupId, Long userId) {
+    public InviteCodeResponse getInviteCode(Long groupId, User user) {
         Group group = groupRepository.findByIdWithRoom(groupId)
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
 
         // 사용자가 해당 그룹의 멤버인지 확인
-        boolean isMember = memberRepository.existsByRoomIdAndUserId(group.getRoom().getId(), userId);
+        boolean isMember = memberRepository.existsByRoomIdAndUserId(group.getRoom().getId(), user.getId());
         if (!isMember) {
             throw new CustomException(ErrorCode.NO_ACCESS_PERMISSION);
         }
@@ -134,7 +135,7 @@ public class GroupService {
 
     // 그룹 참여 (인증 선택적)
     @Transactional
-    public RoomJoinResponse joinRoom(String inviteCode, Long userId) {
+    public RoomJoinResponse joinRoom(String inviteCode, User user) {
         Room room = roomRepository.findByInviteCode(inviteCode)
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_INVITE_CODE));
 
@@ -143,20 +144,20 @@ public class GroupService {
             throw new CustomException(ErrorCode.INVITE_CODE_EXPIRED);
         }
 
-        // userId가 null이면 (비로그인) 예외 발생
-        if (userId == null) {
+        // user가 null이면 (비로그인) 예외 발생
+        if (user == null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
         // 이미 멤버인지 확인
-        if (memberRepository.existsByRoomIdAndUserId(room.getId(), userId)) {
+        if (memberRepository.existsByRoomIdAndUserId(room.getId(), user.getId())) {
             throw new CustomException(ErrorCode.ALREADY_MEMBER);
         }
 
         // 멤버 추가
         Member member = Member.builder()
                 .room(room)
-                .userId(userId)
+                .user(user)
                 .build();
         memberRepository.save(member);
 
@@ -168,11 +169,11 @@ public class GroupService {
     }
 
     @Transactional
-    public void leaveGroup(Long groupId, Long userId) {
+    public void leaveGroup(Long groupId, User user) {
         Group group = groupRepository.findByIdWithRoom(groupId)
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
 
-        Member member = memberRepository.findByRoomIdAndUserId(group.getRoom().getId(), userId)
+        Member member = memberRepository.findByRoomIdAndUserId(group.getRoom().getId(), user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_GROUP_MEMBER));
 
         memberRepository.delete(member);

@@ -12,7 +12,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     
     List<Member> findByRoomId(Long roomId);
 
-    @Query("SELECT m FROM Member m WHERE m.room.id = :roomId AND m.userId = :userId")
+    @Query("SELECT m FROM Member m WHERE m.room.id = :roomId AND m.user.id = :userId")
     Optional<Member> findByRoomIdAndUserId(@Param("roomId") Long roomId, @Param("userId") Long userId);
 
     boolean existsByRoomIdAndUserId(Long roomId, Long userId);

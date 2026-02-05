@@ -14,16 +14,20 @@ import com.deepflow.settlementsystem.group.entity.Room;
 import com.deepflow.settlementsystem.group.repository.GroupRepository;
 import com.deepflow.settlementsystem.group.repository.MemberRepository;
 import com.deepflow.settlementsystem.group.repository.RoomRepository;
+import com.deepflow.settlementsystem.user.entity.User;
+import com.deepflow.settlementsystem.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -46,13 +50,28 @@ class GroupServiceTest {
     @Autowired
     private MemberRepository memberRepository;
 
-    private Long testUserId1;
-    private Long testUserId2;
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    private User testUser1;
+    private User testUser2;
 
     @BeforeEach
     void setUp() {
-        testUserId1 = 1L;
-        testUserId2 = 2L;
+        testUser1 = createTestUser(1L, "user1");
+        testUser2 = createTestUser(2L, "user2");
+    }
+
+    private User createTestUser(Long kakaoId, String nickname) {
+        return userRepository.save(User.builder()
+                .kakaoId(kakaoId)
+                .username(UUID.randomUUID().toString())
+                .nickname(nickname)
+                .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .build());
     }
 
     private GroupCreateRequest createGroupRequest(String name, String description) {
@@ -80,7 +99,7 @@ class GroupServiceTest {
         GroupCreateRequest request = createGroupRequest("테스트 그룹", "테스트 설명");
 
         // when
-        GroupResponse response = groupService.createGroup(request, testUserId1);
+        GroupResponse response = groupService.createGroup(request, testUser1);
 
         // then
         assertThat(response).isNotNull();
@@ -103,21 +122,21 @@ class GroupServiceTest {
         // Member 확인
         List<Member> members = memberRepository.findByRoomId(savedRoom.getId());
         assertThat(members).hasSize(1);
-        assertThat(members.get(0).getUserId()).isEqualTo(testUserId1);
+        assertThat(members.get(0).getUser().getId()).isEqualTo(testUser1.getId());
     }
 
     @Test
     @DisplayName("내 그룹 목록 조회 성공")
     void getMyGroups_Success() {
         // given
-        groupService.createGroup(createGroupRequest("그룹 1", null), testUserId1);
-        groupService.createGroup(createGroupRequest("그룹 2", null), testUserId1);
+        groupService.createGroup(createGroupRequest("그룹 1", null), testUser1);
+        groupService.createGroup(createGroupRequest("그룹 2", null), testUser1);
 
         // 다른 사용자의 그룹
-        groupService.createGroup(createGroupRequest("그룹 3", null), testUserId2);
+        groupService.createGroup(createGroupRequest("그룹 3", null), testUser2);
 
         // when
-        List<GroupResponse> myGroups = groupService.getMyGroups(testUserId1);
+        List<GroupResponse> myGroups = groupService.getMyGroups(testUser1);
 
         // then
         assertThat(myGroups).hasSize(2);
@@ -129,7 +148,7 @@ class GroupServiceTest {
     @DisplayName("내 그룹 목록 조회 - 참여한 그룹이 없을 때 빈 목록 반환")
     void getMyGroups_EmptyList() {
         // when
-        List<GroupResponse> myGroups = groupService.getMyGroups(testUserId1);
+        List<GroupResponse> myGroups = groupService.getMyGroups(testUser1);
 
         // then
         assertThat(myGroups).isEmpty();
@@ -139,10 +158,10 @@ class GroupServiceTest {
     @DisplayName("그룹 상세 조회 성공")
     void getGroupDetail_Success() {
         // given
-        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", "테스트 설명"), testUserId1);
+        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", "테스트 설명"), testUser1);
 
         // when
-        GroupDetailResponse response = groupService.getGroupDetail(createdGroup.getId(), testUserId1);
+        GroupDetailResponse response = groupService.getGroupDetail(createdGroup.getId(), testUser1);
 
         // then
         assertThat(response).isNotNull();
@@ -152,14 +171,14 @@ class GroupServiceTest {
         assertThat(response.getInviteCode()).isNotBlank();
         assertThat(response.getInviteLink()).isNotBlank();
         assertThat(response.getMembers()).hasSize(1);
-        assertThat(response.getMembers().get(0).getUserId()).isEqualTo(testUserId1);
+        assertThat(response.getMembers().get(0).getUserId()).isEqualTo(testUser1.getId());
     }
 
     @Test
     @DisplayName("그룹 상세 조회 실패 - 그룹이 존재하지 않음")
     void getGroupDetail_GroupNotFound() {
         // when & then
-        assertThatThrownBy(() -> groupService.getGroupDetail(999L, testUserId1))
+        assertThatThrownBy(() -> groupService.getGroupDetail(999L, testUser1))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.GROUP_NOT_FOUND);
@@ -169,10 +188,10 @@ class GroupServiceTest {
     @DisplayName("그룹 상세 조회 실패 - 그룹 멤버가 아님")
     void getGroupDetail_NoAccessPermission() {
         // given
-        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUserId1);
+        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUser1);
 
         // when & then
-        assertThatThrownBy(() -> groupService.getGroupDetail(createdGroup.getId(), testUserId2))
+        assertThatThrownBy(() -> groupService.getGroupDetail(createdGroup.getId(), testUser2))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.NO_ACCESS_PERMISSION);
@@ -182,10 +201,10 @@ class GroupServiceTest {
     @DisplayName("초대 코드 조회 성공")
     void getInviteCode_Success() {
         // given
-        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUserId1);
+        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUser1);
 
         // when
-        InviteCodeResponse response = groupService.getInviteCode(createdGroup.getId(), testUserId1);
+        InviteCodeResponse response = groupService.getInviteCode(createdGroup.getId(), testUser1);
 
         // then
         assertThat(response).isNotNull();
@@ -199,10 +218,10 @@ class GroupServiceTest {
     @DisplayName("초대 코드 조회 실패 - 그룹 멤버가 아님")
     void getInviteCode_NoAccessPermission() {
         // given
-        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUserId1);
+        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUser1);
 
         // when & then
-        assertThatThrownBy(() -> groupService.getInviteCode(createdGroup.getId(), testUserId2))
+        assertThatThrownBy(() -> groupService.getInviteCode(createdGroup.getId(), testUser2))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.NO_ACCESS_PERMISSION);
@@ -212,7 +231,7 @@ class GroupServiceTest {
     @DisplayName("초대 코드로 그룹 정보 조회 성공")
     void getJoinInfo_Success() {
         // given
-        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", "테스트 설명"), testUserId1);
+        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", "테스트 설명"), testUser1);
         
         Group group = groupRepository.findById(createdGroup.getId()).orElseThrow();
         String inviteCode = group.getRoom().getInviteCode();
@@ -242,7 +261,7 @@ class GroupServiceTest {
     @DisplayName("초대 코드로 그룹 정보 조회 실패 - 만료된 초대 코드")
     void getJoinInfo_ExpiredInviteCode() {
         // given
-        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUserId1);
+        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUser1);
         
         Group group = groupRepository.findById(createdGroup.getId()).orElseThrow();
         Room room = group.getRoom();
@@ -270,13 +289,13 @@ class GroupServiceTest {
     @DisplayName("그룹 참여 성공")
     void joinRoom_Success() {
         // given
-        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUserId1);
+        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUser1);
         
         Group group = groupRepository.findById(createdGroup.getId()).orElseThrow();
         String inviteCode = group.getRoom().getInviteCode();
 
         // when
-        RoomJoinResponse response = groupService.joinRoom(inviteCode, testUserId2);
+        RoomJoinResponse response = groupService.joinRoom(inviteCode, testUser2);
 
         // then
         assertThat(response).isNotNull();
@@ -287,15 +306,15 @@ class GroupServiceTest {
         // Member 확인
         List<Member> members = memberRepository.findByRoomId(group.getRoom().getId());
         assertThat(members).hasSize(2);
-        assertThat(members).extracting(Member::getUserId)
-                .containsExactlyInAnyOrder(testUserId1, testUserId2);
+        assertThat(members).extracting(m -> m.getUser().getId())
+                .containsExactlyInAnyOrder(testUser1.getId(), testUser2.getId());
     }
 
     @Test
     @DisplayName("그룹 참여 실패 - 유효하지 않은 초대 코드")
     void joinRoom_InvalidInviteCode() {
         // when & then
-        assertThatThrownBy(() -> groupService.joinRoom("invalid_code", testUserId1))
+        assertThatThrownBy(() -> groupService.joinRoom("invalid_code", testUser1))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.INVALID_INVITE_CODE);
@@ -305,7 +324,7 @@ class GroupServiceTest {
     @DisplayName("그룹 참여 실패 - 비로그인 사용자")
     void joinRoom_Unauthorized() {
         // given
-        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUserId1);
+        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUser1);
         
         Group group = groupRepository.findById(createdGroup.getId()).orElseThrow();
         String inviteCode = group.getRoom().getInviteCode();
@@ -321,13 +340,13 @@ class GroupServiceTest {
     @DisplayName("그룹 참여 실패 - 이미 멤버인 경우")
     void joinRoom_AlreadyMember() {
         // given
-        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUserId1);
+        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUser1);
         
         Group group = groupRepository.findById(createdGroup.getId()).orElseThrow();
         String inviteCode = group.getRoom().getInviteCode();
 
         // when & then
-        assertThatThrownBy(() -> groupService.joinRoom(inviteCode, testUserId1))
+        assertThatThrownBy(() -> groupService.joinRoom(inviteCode, testUser1))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.ALREADY_MEMBER);
@@ -337,7 +356,7 @@ class GroupServiceTest {
     @DisplayName("그룹 탈퇴 성공")
     void leaveGroup_Success() {
         // given
-        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUserId1);
+        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUser1);
         
         Long groupId = createdGroup.getId();
         Group group = groupRepository.findById(groupId).orElseThrow();
@@ -345,31 +364,31 @@ class GroupServiceTest {
         // 다른 멤버 추가
         Member member2 = Member.builder()
                 .room(group.getRoom())
-                .userId(testUserId2)
+                .user(testUser2)
                 .build();
         memberRepository.save(member2);
 
         // when
-        groupService.leaveGroup(groupId, testUserId1);
+        groupService.leaveGroup(groupId, testUser1);
 
         // then
         // 첫 번째 멤버는 삭제되었지만 그룹은 유지되어야 함 (다른 멤버가 있으므로)
         assertThat(groupRepository.findById(groupId)).isPresent();
         List<Member> remainingMembers = memberRepository.findByRoomId(group.getRoom().getId());
         assertThat(remainingMembers).hasSize(1);
-        assertThat(remainingMembers.get(0).getUserId()).isEqualTo(testUserId2);
+        assertThat(remainingMembers.get(0).getUser().getId()).isEqualTo(testUser2.getId());
     }
 
     @Test
     @DisplayName("그룹 탈퇴 성공 - 마지막 멤버 탈퇴 시 Group과 Room 자동 삭제")
     void leaveGroup_LastMember_GroupAndRoomDeleted() {
         // given
-        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUserId1);
+        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUser1);
         
         Long groupId = createdGroup.getId();
 
         // when
-        groupService.leaveGroup(groupId, testUserId1);
+        groupService.leaveGroup(groupId, testUser1);
 
         // then
         // Group과 Room이 모두 삭제되어야 함
@@ -385,7 +404,7 @@ class GroupServiceTest {
     @DisplayName("그룹 탈퇴 실패 - 그룹이 존재하지 않음")
     void leaveGroup_GroupNotFound() {
         // when & then
-        assertThatThrownBy(() -> groupService.leaveGroup(999L, testUserId1))
+        assertThatThrownBy(() -> groupService.leaveGroup(999L, testUser1))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.GROUP_NOT_FOUND);
@@ -395,10 +414,10 @@ class GroupServiceTest {
     @DisplayName("그룹 탈퇴 실패 - 그룹 멤버가 아님")
     void leaveGroup_NotGroupMember() {
         // given
-        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUserId1);
+        GroupResponse createdGroup = groupService.createGroup(createGroupRequest("테스트 그룹", null), testUser1);
 
         // when & then
-        assertThatThrownBy(() -> groupService.leaveGroup(createdGroup.getId(), testUserId2))
+        assertThatThrownBy(() -> groupService.leaveGroup(createdGroup.getId(), testUser2))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.NOT_GROUP_MEMBER);

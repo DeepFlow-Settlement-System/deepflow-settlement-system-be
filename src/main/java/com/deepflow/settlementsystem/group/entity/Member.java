@@ -1,5 +1,6 @@
 package com.deepflow.settlementsystem.group.entity;
 
+import com.deepflow.settlementsystem.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -28,8 +29,9 @@ public class Member {
     @JoinColumn(name = "room_id", nullable = false)
     private Room room;
 
-    @Column(nullable = false)
-    private Long userId; // User ID
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -40,8 +42,8 @@ public class Member {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Member(Room room, Long userId) {
+    public Member(Room room, User user) {
         this.room = room;
-        this.userId = userId;
+        this.user = user;
     }
 }

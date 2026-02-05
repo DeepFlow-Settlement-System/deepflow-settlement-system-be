@@ -7,6 +7,7 @@ import com.deepflow.settlementsystem.group.dto.response.GroupResponse;
 import com.deepflow.settlementsystem.group.dto.response.InviteCodeResponse;
 import com.deepflow.settlementsystem.group.dto.response.RoomJoinResponse;
 import com.deepflow.settlementsystem.group.service.GroupService;
+import com.deepflow.settlementsystem.user.entity.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -68,8 +69,17 @@ class GroupControllerTest {
         }
     }
 
-    private static final Long TEST_USER_ID = 1L;
     private static final Long TEST_GROUP_ID = 1L;
+    
+    private User createTestUser() {
+        return User.builder()
+                .id(1L)
+                .kakaoId(1L)
+                .username("testuser")
+                .nickname("테스트유저")
+                .password("encodedPassword")
+                .build();
+    }
 
     @Test
     @DisplayName("그룹 생성 성공 - 201 Created")
@@ -85,7 +95,7 @@ class GroupControllerTest {
                 .inviteLink("http://localhost:8080/api/groups/join?code=testcode123")
                 .build();
 
-        given(groupService.createGroup(any(GroupCreateRequest.class), eq(TEST_USER_ID)))
+        given(groupService.createGroup(any(GroupCreateRequest.class), any(User.class)))
                 .willReturn(response);
 
         // when & then
@@ -131,7 +141,7 @@ class GroupControllerTest {
                         .build()
         );
 
-        given(groupService.getMyGroups(TEST_USER_ID)).willReturn(responses);
+        given(groupService.getMyGroups(any(User.class))).willReturn(responses);
 
         // when & then
         mockMvc.perform(get("/api/groups"))
@@ -154,7 +164,7 @@ class GroupControllerTest {
                 .inviteCode("testcode123")
                 .build();
 
-        given(groupService.getGroupDetail(TEST_GROUP_ID, TEST_USER_ID))
+        given(groupService.getGroupDetail(eq(TEST_GROUP_ID), any(User.class)))
                 .willReturn(response);
 
         // when & then
@@ -177,7 +187,7 @@ class GroupControllerTest {
                 .inviteLink("http://localhost:8080/api/groups/join?code=testcode123")
                 .build();
 
-        given(groupService.getInviteCode(TEST_GROUP_ID, TEST_USER_ID))
+        given(groupService.getInviteCode(eq(TEST_GROUP_ID), any(User.class)))
                 .willReturn(response);
 
         // when & then
@@ -236,7 +246,7 @@ class GroupControllerTest {
                 .message("그룹에 성공적으로 참여했습니다.")
                 .build();
 
-        given(groupService.joinRoom(eq(inviteCode), eq(TEST_USER_ID)))
+        given(groupService.joinRoom(eq(inviteCode), any(User.class)))
                 .willReturn(response);
 
         // when & then

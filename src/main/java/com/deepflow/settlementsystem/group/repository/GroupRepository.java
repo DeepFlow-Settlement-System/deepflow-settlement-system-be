@@ -13,7 +13,7 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
     @Query("SELECT DISTINCT g FROM Group g " +
            "JOIN g.room r " +
            "JOIN Member m ON m.room.id = r.id " +
-           "WHERE m.userId = :userId")
+           "WHERE m.user.id = :userId")
     List<Group> findAllByUserId(@Param("userId") Long userId);
 
     @Query("SELECT g FROM Group g " +

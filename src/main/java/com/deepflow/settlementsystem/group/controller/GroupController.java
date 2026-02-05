@@ -3,6 +3,7 @@ package com.deepflow.settlementsystem.group.controller;
 import com.deepflow.settlementsystem.group.dto.request.*;
 import com.deepflow.settlementsystem.group.dto.response.*;
 import com.deepflow.settlementsystem.group.service.GroupService;
+import com.deepflow.settlementsystem.user.entity.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -28,16 +29,16 @@ public class GroupController {
     @PostMapping
     public ResponseEntity<GroupResponse> createGroup(
             @Valid @RequestBody GroupCreateRequest request,
-            @AuthenticationPrincipal Long userId) {
-        GroupResponse response = groupService.createGroup(request, userId);
+            @AuthenticationPrincipal User user) {
+        GroupResponse response = groupService.createGroup(request, user);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @Operation(summary = "사용자 그룹 조회", description = "사용자가 참여한 그룹을 조회합니다.")
     @GetMapping
     public ResponseEntity<List<GroupResponse>> getMyGroups(
-            @AuthenticationPrincipal Long userId) {
-        List<GroupResponse> responses = groupService.getMyGroups(userId);
+            @AuthenticationPrincipal User user) {
+        List<GroupResponse> responses = groupService.getMyGroups(user);
         return ResponseEntity.ok(responses);
     }
 
@@ -45,8 +46,8 @@ public class GroupController {
     @GetMapping("/{groupId}")
     public ResponseEntity<GroupDetailResponse> getGroupDetail(
             @PathVariable Long groupId,
-            @AuthenticationPrincipal Long userId) {
-        GroupDetailResponse response = groupService.getGroupDetail(groupId, userId);
+            @AuthenticationPrincipal User user) {
+        GroupDetailResponse response = groupService.getGroupDetail(groupId, user);
         return ResponseEntity.ok(response);
     }
 
@@ -54,8 +55,8 @@ public class GroupController {
     @GetMapping("/{groupId}/invite-code")
     public ResponseEntity<InviteCodeResponse> getInviteCode(
             @PathVariable Long groupId,
-            @AuthenticationPrincipal Long userId) {
-        InviteCodeResponse response = groupService.getInviteCode(groupId, userId);
+            @AuthenticationPrincipal User user) {
+        InviteCodeResponse response = groupService.getInviteCode(groupId, user);
         return ResponseEntity.ok(response);
     }
 
@@ -63,8 +64,8 @@ public class GroupController {
     @PostMapping("/{groupId}/leave")
     public ResponseEntity<Void> leaveGroup(
             @PathVariable Long groupId,
-            @AuthenticationPrincipal Long userId) {
-        groupService.leaveGroup(groupId, userId);
+            @AuthenticationPrincipal User user) {
+        groupService.leaveGroup(groupId, user);
         return ResponseEntity.noContent().build();
     }
 
@@ -80,16 +81,16 @@ public class GroupController {
     @PostMapping("/join")
     public ResponseEntity<RoomJoinResponse> joinRoom(
             @RequestParam String code) {
-        Long userId = getCurrentUserId();
-        RoomJoinResponse response = groupService.joinRoom(code, userId);
+        User user = getCurrentUser();
+        RoomJoinResponse response = groupService.joinRoom(code, user);
         return ResponseEntity.ok(response);
     }
 
-    // 현재 로그인한 사용자 ID 조회 (로그인 상태가 아닐 시 null 반환)
-    private Long getCurrentUserId() {
+    // 현재 로그인한 사용자 조회 (로그인 상태가 아닐 시 null 반환)
+    private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated() && !authentication.getPrincipal().equals("anonymousUser")) {
-            return (Long) authentication.getPrincipal();
+            return (User) authentication.getPrincipal();
         }
         return null;
     }
