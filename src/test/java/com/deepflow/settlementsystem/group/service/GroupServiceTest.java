@@ -1,7 +1,7 @@
 package com.deepflow.settlementsystem.group.service;
 
 import com.deepflow.settlementsystem.common.exception.CustomException;
-import com.deepflow.settlementsystem.common.exception.ErrorMessage;
+import com.deepflow.settlementsystem.common.code.ErrorCode;
 import com.deepflow.settlementsystem.group.dto.request.GroupCreateRequest;
 import com.deepflow.settlementsystem.group.dto.response.GroupDetailResponse;
 import com.deepflow.settlementsystem.group.dto.response.GroupJoinInfoResponse;
@@ -161,8 +161,8 @@ class GroupServiceTest {
         // when & then
         assertThatThrownBy(() -> groupService.getGroupDetail(999L, testUserId1))
                 .isInstanceOf(CustomException.class)
-                .extracting("errorMessage")
-                .isEqualTo(ErrorMessage.GROUP_NOT_FOUND);
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.GROUP_NOT_FOUND);
     }
 
     @Test
@@ -174,8 +174,8 @@ class GroupServiceTest {
         // when & then
         assertThatThrownBy(() -> groupService.getGroupDetail(createdGroup.getId(), testUserId2))
                 .isInstanceOf(CustomException.class)
-                .extracting("errorMessage")
-                .isEqualTo(ErrorMessage.NO_ACCESS_PERMISSION);
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.NO_ACCESS_PERMISSION);
     }
 
     @Test
@@ -204,8 +204,8 @@ class GroupServiceTest {
         // when & then
         assertThatThrownBy(() -> groupService.getInviteCode(createdGroup.getId(), testUserId2))
                 .isInstanceOf(CustomException.class)
-                .extracting("errorMessage")
-                .isEqualTo(ErrorMessage.NO_ACCESS_PERMISSION);
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.NO_ACCESS_PERMISSION);
     }
 
     @Test
@@ -234,8 +234,8 @@ class GroupServiceTest {
         // when & then
         assertThatThrownBy(() -> groupService.getJoinInfo("invalid_code"))
                 .isInstanceOf(CustomException.class)
-                .extracting("errorMessage")
-                .isEqualTo(ErrorMessage.INVALID_INVITE_CODE);
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INVALID_INVITE_CODE);
     }
 
     @Test
@@ -262,8 +262,8 @@ class GroupServiceTest {
         // when & then
         assertThatThrownBy(() -> groupService.getJoinInfo(inviteCode))
                 .isInstanceOf(CustomException.class)
-                .extracting("errorMessage")
-                .isEqualTo(ErrorMessage.INVITE_CODE_EXPIRED);
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INVITE_CODE_EXPIRED);
     }
 
     @Test
@@ -297,8 +297,8 @@ class GroupServiceTest {
         // when & then
         assertThatThrownBy(() -> groupService.joinRoom("invalid_code", testUserId1))
                 .isInstanceOf(CustomException.class)
-                .extracting("errorMessage")
-                .isEqualTo(ErrorMessage.INVALID_INVITE_CODE);
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INVALID_INVITE_CODE);
     }
 
     @Test
@@ -313,8 +313,8 @@ class GroupServiceTest {
         // when & then
         assertThatThrownBy(() -> groupService.joinRoom(inviteCode, null))
                 .isInstanceOf(CustomException.class)
-                .extracting("errorMessage")
-                .isEqualTo(ErrorMessage.UNAUTHORIZED);
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.UNAUTHORIZED);
     }
 
     @Test
@@ -329,8 +329,8 @@ class GroupServiceTest {
         // when & then
         assertThatThrownBy(() -> groupService.joinRoom(inviteCode, testUserId1))
                 .isInstanceOf(CustomException.class)
-                .extracting("errorMessage")
-                .isEqualTo(ErrorMessage.ALREADY_MEMBER);
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.ALREADY_MEMBER);
     }
 
     @Test
@@ -387,8 +387,8 @@ class GroupServiceTest {
         // when & then
         assertThatThrownBy(() -> groupService.leaveGroup(999L, testUserId1))
                 .isInstanceOf(CustomException.class)
-                .extracting("errorMessage")
-                .isEqualTo(ErrorMessage.GROUP_NOT_FOUND);
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.GROUP_NOT_FOUND);
     }
 
     @Test
@@ -400,7 +400,7 @@ class GroupServiceTest {
         // when & then
         assertThatThrownBy(() -> groupService.leaveGroup(createdGroup.getId(), testUserId2))
                 .isInstanceOf(CustomException.class)
-                .extracting("errorMessage")
-                .isEqualTo(ErrorMessage.NOT_GROUP_MEMBER);
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.NOT_GROUP_MEMBER);
     }
 }

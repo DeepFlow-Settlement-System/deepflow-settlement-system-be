@@ -256,7 +256,7 @@ class GroupControllerTest {
         String inviteCode = "testcode123";
         given(groupService.joinRoom(eq(inviteCode), eq(null)))
                 .willThrow(new com.deepflow.settlementsystem.common.exception.CustomException(
-                        com.deepflow.settlementsystem.common.exception.ErrorMessage.UNAUTHORIZED));
+                        com.deepflow.settlementsystem.common.code.ErrorCode.UNAUTHORIZED));
 
         // when & then
         mockMvc.perform(post("/api/groups/join")

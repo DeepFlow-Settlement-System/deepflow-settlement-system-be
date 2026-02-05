@@ -1,5 +1,6 @@
 package com.deepflow.settlementsystem.common.exception;
 
+import com.deepflow.settlementsystem.common.code.ErrorCode;
 import com.deepflow.settlementsystem.common.dto.ErrorResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -20,20 +21,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> validationExceptionHandler(MethodArgumentNotValidException e) {
         FieldError firstError = (FieldError) e.getBindingResult().getAllErrors().get(0);
-        String errorCode = firstError.getCode(); // "NotBlank", "Size" 등
+        String errorCode = firstError.getCode();
         
-        ErrorMessage errorMessage = mapToErrorMessage(errorCode);
+        ErrorCode errorCodeEnum = mapToErrorCode(errorCode);
         
         return ResponseEntity
-                .status(errorMessage.getHttpStatus())
-                .body(new ErrorResponse(errorMessage));
+                .status(errorCodeEnum.getHttpStatus())
+                .body(new ErrorResponse(errorCodeEnum));
     }
 
-    private ErrorMessage mapToErrorMessage(String errorCode) {
+    private ErrorCode mapToErrorCode(String errorCode) {
         return switch (errorCode) {
-            case "NotBlank", "NotNull", "NotEmpty" -> ErrorMessage.VALIDATION_REQUIRED_FIELD;
-            case "Size", "Min", "Max" -> ErrorMessage.VALIDATION_INVALID_SIZE;
-            default -> ErrorMessage.INVALID_INPUT;
+            case "NotBlank", "NotNull", "NotEmpty" -> ErrorCode.VALIDATION_REQUIRED_FIELD;
+            case "Size", "Min", "Max" -> ErrorCode.VALIDATION_INVALID_SIZE;
+            default -> ErrorCode.INVALID_INPUT;
         };
     }
 }

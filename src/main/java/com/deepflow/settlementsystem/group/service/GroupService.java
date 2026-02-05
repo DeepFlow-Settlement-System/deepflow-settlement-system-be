@@ -1,7 +1,7 @@
 package com.deepflow.settlementsystem.group.service;
 
+import com.deepflow.settlementsystem.common.code.ErrorCode;
 import com.deepflow.settlementsystem.common.exception.CustomException;
-import com.deepflow.settlementsystem.common.exception.ErrorMessage;
 import com.deepflow.settlementsystem.group.dto.request.GroupCreateRequest;
 import com.deepflow.settlementsystem.group.dto.response.*;
 import com.deepflow.settlementsystem.group.entity.Group;
@@ -66,12 +66,12 @@ public class GroupService {
 
     public GroupDetailResponse getGroupDetail(Long groupId, Long userId) {
         Group group = groupRepository.findByIdWithRoom(groupId)
-                .orElseThrow(() -> new CustomException(ErrorMessage.GROUP_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
 
         // 사용자가 해당 그룹의 멤버인지 확인
         boolean isMember = memberRepository.existsByRoomIdAndUserId(group.getRoom().getId(), userId);
         if (!isMember) {
-            throw new CustomException(ErrorMessage.NO_ACCESS_PERMISSION);
+            throw new CustomException(ErrorCode.NO_ACCESS_PERMISSION);
         }
 
         // 멤버 목록 조회
@@ -98,12 +98,12 @@ public class GroupService {
 
     public InviteCodeResponse getInviteCode(Long groupId, Long userId) {
         Group group = groupRepository.findByIdWithRoom(groupId)
-                .orElseThrow(() -> new CustomException(ErrorMessage.GROUP_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
 
         // 사용자가 해당 그룹의 멤버인지 확인
         boolean isMember = memberRepository.existsByRoomIdAndUserId(group.getRoom().getId(), userId);
         if (!isMember) {
-            throw new CustomException(ErrorMessage.NO_ACCESS_PERMISSION);
+            throw new CustomException(ErrorCode.NO_ACCESS_PERMISSION);
         }
 
         return InviteCodeResponse.builder()
@@ -117,11 +117,11 @@ public class GroupService {
     // 초대 코드로 그룹 정보 조회 (인증 불필요)
     public GroupJoinInfoResponse getJoinInfo(String inviteCode) {
         Room room = roomRepository.findByInviteCode(inviteCode)
-                .orElseThrow(() -> new CustomException(ErrorMessage.INVALID_INVITE_CODE));
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_INVITE_CODE));
 
         // 만료 체크
         if (room.isExpired()) {
-            throw new CustomException(ErrorMessage.INVITE_CODE_EXPIRED);
+            throw new CustomException(ErrorCode.INVITE_CODE_EXPIRED);
         }
 
         return GroupJoinInfoResponse.builder()
@@ -136,21 +136,21 @@ public class GroupService {
     @Transactional
     public RoomJoinResponse joinRoom(String inviteCode, Long userId) {
         Room room = roomRepository.findByInviteCode(inviteCode)
-                .orElseThrow(() -> new CustomException(ErrorMessage.INVALID_INVITE_CODE));
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_INVITE_CODE));
 
         // 만료 체크
         if (room.isExpired()) {
-            throw new CustomException(ErrorMessage.INVITE_CODE_EXPIRED);
+            throw new CustomException(ErrorCode.INVITE_CODE_EXPIRED);
         }
 
         // userId가 null이면 (비로그인) 예외 발생
         if (userId == null) {
-            throw new CustomException(ErrorMessage.UNAUTHORIZED);
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
         // 이미 멤버인지 확인
         if (memberRepository.existsByRoomIdAndUserId(room.getId(), userId)) {
-            throw new CustomException(ErrorMessage.ALREADY_MEMBER);
+            throw new CustomException(ErrorCode.ALREADY_MEMBER);
         }
 
         // 멤버 추가
@@ -170,10 +170,10 @@ public class GroupService {
     @Transactional
     public void leaveGroup(Long groupId, Long userId) {
         Group group = groupRepository.findByIdWithRoom(groupId)
-                .orElseThrow(() -> new CustomException(ErrorMessage.GROUP_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
 
         Member member = memberRepository.findByRoomIdAndUserId(group.getRoom().getId(), userId)
-                .orElseThrow(() -> new CustomException(ErrorMessage.NOT_GROUP_MEMBER));
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_GROUP_MEMBER));
 
         memberRepository.delete(member);
 
