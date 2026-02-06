@@ -1,12 +1,10 @@
 package com.deepflow.settlementsystem.auth.controller;
 
-import com.deepflow.settlementsystem.auth.dto.KakaoLoginRequest;
 import com.deepflow.settlementsystem.auth.dto.KakaoLoginUrlResponse;
 import com.deepflow.settlementsystem.auth.dto.LoginResponse;
 import com.deepflow.settlementsystem.auth.service.AuthService;
 import com.deepflow.settlementsystem.common.code.ApiResponseCode;
 import com.deepflow.settlementsystem.common.dto.ApiResponse;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,12 +22,12 @@ public class AuthController {
         );
     }
 
-    @PostMapping("/login/kakao")
+    @PostMapping("/v1/oauth2/kakao")
     public ResponseEntity<ApiResponse<LoginResponse>> kakaoLogin(
-            @RequestBody @Valid KakaoLoginRequest kakaoLoginRequest
+            @RequestParam String code
     ) {
         return ResponseEntity.ok(
-                new ApiResponse<>(ApiResponseCode.OK, authService.kakaoLogin(kakaoLoginRequest))
+                new ApiResponse<>(ApiResponseCode.OK, authService.kakaoLogin(code))
         );
     }
 }

@@ -2,7 +2,10 @@ package com.deepflow.settlementsystem.auth.service;
 
 import com.deepflow.settlementsystem.auth.config.KakaoApiUrl;
 import com.deepflow.settlementsystem.auth.config.KakaoProperties;
-import com.deepflow.settlementsystem.auth.dto.*;
+import com.deepflow.settlementsystem.auth.dto.KakaoLoginUrlResponse;
+import com.deepflow.settlementsystem.auth.dto.KakaoTokenResponse;
+import com.deepflow.settlementsystem.auth.dto.KakaoUserInfo;
+import com.deepflow.settlementsystem.auth.dto.LoginResponse;
 import com.deepflow.settlementsystem.common.code.ErrorCode;
 import com.deepflow.settlementsystem.common.exception.CustomException;
 import com.deepflow.settlementsystem.security.JwtTokenProvider;
@@ -28,8 +31,8 @@ public class AuthService {
     private final RestClient restClient;
     private final KakaoProperties kakaoProperties;
 
-    public LoginResponse kakaoLogin(KakaoLoginRequest loginRequest) {
-        String accessToken = getKakaoAccessToken(loginRequest);
+    public LoginResponse kakaoLogin(String code) {
+        String accessToken = getKakaoAccessToken(code);
         KakaoUserInfo kakaoUserInfo = getKakaoUserInfo(accessToken);
         User user = userService.getUserOrCreate(kakaoUserInfo);
 
@@ -66,7 +69,7 @@ public class AuthService {
         return userInfo;
     }
 
-    private String getKakaoAccessToken(KakaoLoginRequest loginRequest) {
+    private String getKakaoAccessToken(String code) {
         KakaoTokenResponse tokenResponse = restClient.post()
                 .uri(UriComponentsBuilder
                         .fromUriString(KakaoApiUrl.TOKEN.getUrl())
@@ -74,7 +77,7 @@ public class AuthService {
                         .queryParam("client_id", kakaoProperties.getClientId())
                         .queryParam("redirect_uri", kakaoProperties.getRedirectUrl())
                         .queryParam("client_secret", kakaoProperties.getClientSecret())
-                        .queryParam("code", loginRequest.getCode())
+                        .queryParam("code", code)
                         .build().toUri())
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
                 .retrieve()
