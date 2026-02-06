@@ -1,6 +1,7 @@
 package com.deepflow.settlementsystem.user.dto;
 
 import com.deepflow.settlementsystem.user.entity.User;
+import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,12 +15,14 @@ public class UserDto {
     private Long id;
     private Long kakaoId;
     private String username;
+    private String kakaoPaySuffix;
     private String nickname;
 
     public static UserDto fromEntity(User user) {
         return UserDto.builder()
                 .id(user.getId())
                 .kakaoId(user.getKakaoId())
+                .kakaoPaySuffix(user.getKakaoPaySuffix())
                 .username(user.getUsername())
                 .nickname(user.getNickname())
                 .build();
