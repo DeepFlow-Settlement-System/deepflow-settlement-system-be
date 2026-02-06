@@ -15,6 +15,10 @@ spring:
   application:
     name: settlement-system
 
+app:
+  base-url: https://t2.mobidic.shop
+  timezone: Asia/Seoul
+
 server:
   port: 8080
 
