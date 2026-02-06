@@ -7,7 +7,10 @@ import com.deepflow.settlementsystem.common.code.ApiResponseCode;
 import com.deepflow.settlementsystem.common.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
@@ -22,7 +25,7 @@ public class AuthController {
         );
     }
 
-    @PostMapping("/v1/oauth2/kakao")
+    @GetMapping("/v1/oauth2/kakao")
     public ResponseEntity<ApiResponse<LoginResponse>> kakaoLogin(
             @RequestParam String code
     ) {
