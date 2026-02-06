@@ -3,6 +3,7 @@ package com.deepflow.settlementsystem.settlement.controller;
 import com.deepflow.settlementsystem.settlement.dto.request.SettlementMessageRequest;
 import com.deepflow.settlementsystem.settlement.dto.response.SettlementListResponse;
 import com.deepflow.settlementsystem.settlement.service.SettlementService;
+import com.deepflow.settlementsystem.user.entity.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,7 @@ public class SettlementController {
     @PostMapping("/rooms/{roomId}/calculate")
     public ResponseEntity<SettlementListResponse> calculateSettlement(
             @PathVariable Long roomId,
-            @AuthenticationPrincipal Long userId) {
+            @AuthenticationPrincipal User user) {
         SettlementListResponse response = settlementService.calculateSettlement(roomId);
         return ResponseEntity.ok(response);
     }
@@ -27,7 +28,7 @@ public class SettlementController {
     @GetMapping("/rooms/{roomId}")
     public ResponseEntity<SettlementListResponse> getSettlement(
             @PathVariable Long roomId,
-            @AuthenticationPrincipal Long userId) {
+            @AuthenticationPrincipal User user) {
         SettlementListResponse response = settlementService.getSettlement(roomId);
         return ResponseEntity.ok(response);
     }
@@ -36,8 +37,8 @@ public class SettlementController {
     public ResponseEntity<Void> sendSettlementMessages(
             @PathVariable Long roomId,
             @Valid @RequestBody SettlementMessageRequest request,
-            @AuthenticationPrincipal Long userId) {
-        settlementService.sendSettlementMessages(roomId, request.getReceiverUserIds(), userId);
+            @AuthenticationPrincipal User user) {
+        settlementService.sendSettlementMessages(roomId, request.getReceiverUserIds(), user.getId());
         return ResponseEntity.ok().build();
     }
 }
