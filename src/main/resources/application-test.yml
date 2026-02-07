@@ -9,6 +9,10 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+  data:
+    redis:
+      host: localhost
+      port: 6379
 
 jwt:
   secret: 92bcec54721d73998cd0c414f550c0fdead66dc922a4b84f6fc5e3bb1f15b2cf
