@@ -1,6 +1,7 @@
 package com.deepflow.settlementsystem.settlement.service;
 
 import com.deepflow.settlementsystem.auth.config.KakaoApiUrl;
+import com.deepflow.settlementsystem.auth.service.KakaoTokenService;
 import com.deepflow.settlementsystem.common.code.ErrorCode;
 import com.deepflow.settlementsystem.common.exception.CustomException;
 import com.deepflow.settlementsystem.settlement.dto.SettlementItem;
@@ -31,18 +32,21 @@ public class SettlementService {
     
     private final UserRepository userRepository;
     private final RestClient restClient;
+    private final KakaoTokenService kakaoTokenService;
     
     public String sendSettlementMessage(Long senderUserId, Long receiverUserId, Long amount) {
         User sender = userRepository.findById(senderUserId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         
-        if (sender.getKakaoAccessToken() == null || sender.getKakaoAccessToken().isEmpty()) {
+        // KakaoTokenService로 access token 조회
+        String accessToken = kakaoTokenService.getKakaoAccessToken(senderUserId);
+        if (accessToken == null || accessToken.isEmpty()) {
             throw new CustomException(ErrorCode.INVALID_TOKEN);
         }
         
         // 로그인한 유저의 kakaoPaySuffix 확인
         if (sender.getKakaoPaySuffix() == null || sender.getKakaoPaySuffix().isEmpty()) {
-            throw new CustomException(ErrorCode.INVALID_INPUT); // 또는 적절한 에러 코드
+            throw new CustomException(ErrorCode.INVALID_INPUT);
         }
         
         // 첫 페이지 조회
@@ -51,7 +55,7 @@ public class SettlementService {
         int pageCount = 0;
         
         do {
-            KakaoFriendsResponse friendsResponse = getKakaoFriends(sender.getKakaoAccessToken(), currentAfterUrl);
+            KakaoFriendsResponse friendsResponse = getKakaoFriends(accessToken, currentAfterUrl);
             
             // 친구 목록에서 receiverUserId 찾기
             String receiverUuid = findReceiverUuid(friendsResponse, receiverUserId);

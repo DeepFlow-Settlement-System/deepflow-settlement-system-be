@@ -36,9 +36,6 @@ public class User implements UserDetails {
     @Column(name = "kakao_pay_suffix", unique = true)
     private String kakaoPaySuffix;
 
-    @Column(name = "kakao_access_token")
-    private String kakaoAccessToken;
-
     @Column(name = "password", nullable = false)
     @JsonIgnore
     private String password;
