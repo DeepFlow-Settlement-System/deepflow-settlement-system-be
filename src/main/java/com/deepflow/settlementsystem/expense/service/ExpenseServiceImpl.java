@@ -21,9 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 @RequiredArgsConstructor
 public class ExpenseServiceImpl implements ExpenseService {
-
-  private static final String DEFAULT_OCR_STATUS = "PENDING"; // 준비
-
+  
   private final GroupRepository groupRepository;
   private final ExpenseRepository expenseRepository;
   private final ExpenseItemRepository expenseItemRepository;
