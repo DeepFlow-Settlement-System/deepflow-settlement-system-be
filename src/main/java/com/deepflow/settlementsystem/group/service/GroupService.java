@@ -61,6 +61,7 @@ public class GroupService {
     public List<GroupResponse> getMyGroups(User user) {
         List<Group> groups = groupRepository.findAllByUserId(user.getId());
         return groups.stream()
+                .filter(group -> group.getRoom() != null) // null 체크
                 .map(group -> toGroupResponse(group, group.getRoom()))
                 .collect(Collectors.toList());
     }
@@ -117,12 +118,11 @@ public class GroupService {
 
     // 초대 코드로 그룹 정보 조회 (인증 불필요)
     public GroupJoinInfoResponse getJoinInfo(String inviteCode) {
-        Room room = roomRepository.findByInviteCode(inviteCode)
+        Room room = roomRepository.findByInviteCodeWithGroup(inviteCode)
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_INVITE_CODE));
 
-        // 만료 체크
-        if (room.isExpired()) {
-            throw new CustomException(ErrorCode.INVITE_CODE_EXPIRED);
+        if (room.getGroup() == null) {
+            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
         }
 
         return GroupJoinInfoResponse.builder()
@@ -136,12 +136,11 @@ public class GroupService {
     // 그룹 참여 (인증 선택적)
     @Transactional
     public RoomJoinResponse joinRoom(String inviteCode, User user) {
-        Room room = roomRepository.findByInviteCode(inviteCode)
+        Room room = roomRepository.findByInviteCodeWithGroup(inviteCode)
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_INVITE_CODE));
 
-        // 만료 체크
-        if (room.isExpired()) {
-            throw new CustomException(ErrorCode.INVITE_CODE_EXPIRED);
+        if (room.getGroup() == null) {
+            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
         }
 
         // user가 null이면 (비로그인) 예외 발생
@@ -173,6 +172,10 @@ public class GroupService {
         Group group = groupRepository.findByIdWithRoom(groupId)
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
 
+        if (group.getRoom() == null) {
+            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
+        }
+
         Member member = memberRepository.findByRoomIdAndUserId(group.getRoom().getId(), user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_GROUP_MEMBER));
 
@@ -181,7 +184,7 @@ public class GroupService {
         // 모든 인원이 나갔는지 확인
         List<Member> remainingMembers = memberRepository.findByRoomId(group.getRoom().getId());
         if (remainingMembers.isEmpty()) {
-            // 그룹과 방 삭제 (Cascade로 인해 Room도 함께 삭제됨)
+            // 모든 Member 삭제 후 그룹과 방 삭제
             groupRepository.delete(group);
         }
     }

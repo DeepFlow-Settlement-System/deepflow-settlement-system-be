@@ -89,7 +89,9 @@ public class GroupController {
     // 현재 로그인한 사용자 조회 (로그인 상태가 아닐 시 null 반환)
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated() && !authentication.getPrincipal().equals("anonymousUser")) {
+        if (authentication != null && authentication.isAuthenticated() 
+                && !authentication.getPrincipal().equals("anonymousUser")
+                && authentication.getPrincipal() instanceof User) {
             return (User) authentication.getPrincipal();
         }
         return null;
