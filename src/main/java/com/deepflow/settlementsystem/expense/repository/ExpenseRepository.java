@@ -7,11 +7,11 @@ import java.util.List;
 
 public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
-    List<Expense> findAllByGroup_GroupId(Long groupId);
+    List<Expense> findAllByGroup_Id(Long groupId);
 
-    List<Expense> findAllByGroup_GroupIdAndSpentAtBetween(Long groupId, LocalDateTime start, LocalDateTime end);
+    List<Expense> findAllByGroup_IdAndSpentAtBetween(Long groupId, LocalDateTime start, LocalDateTime end);
 
-    List<Expense> findAllByGroup_GroupIdAndSpentAtGreaterThanEqual(Long groupId, LocalDateTime start);
+    List<Expense> findAllByGroup_IdAndSpentAtGreaterThanEqual(Long groupId, LocalDateTime start);
 
-    List<Expense> findAllByGroup_GroupIdAndSpentAtLessThanEqual(Long groupId, LocalDateTime end);
+    List<Expense> findAllByGroup_IdAndSpentAtLessThanEqual(Long groupId, LocalDateTime end);
 }

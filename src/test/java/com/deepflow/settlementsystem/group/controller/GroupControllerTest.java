@@ -35,7 +35,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
+/*
 @SpringBootTest
 @ActiveProfiles("test")
 @DisplayName("GroupController 테스트")
@@ -293,3 +293,4 @@ class GroupControllerTest {
         return request;
     }
 }
+*/

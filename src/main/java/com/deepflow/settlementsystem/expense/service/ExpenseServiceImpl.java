@@ -279,7 +279,7 @@ public class ExpenseServiceImpl implements ExpenseService {
   public GroupExpenseTotalResponse getGroupTotal(Long groupId) {
       groupRepository.findById(groupId)
               .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
-      long totalAmount = expenseRepository.findAllByGroup_GroupId(groupId).stream()
+      long totalAmount = expenseRepository.findAllByGroup_Id(groupId).stream()
               .map(Expense::getTotalAmount)
               .filter(Objects::nonNull)
               .mapToLong(Integer::longValue)
@@ -303,13 +303,13 @@ public class ExpenseServiceImpl implements ExpenseService {
       // 그룹에 속한 모든 지출을 조회해서, 연관 테이블을 JSON 형태로 묶어 반환
       List<Expense> expenses;
       if (startDateTime != null && endDateTime != null) {
-          expenses = expenseRepository.findAllByGroup_GroupIdAndSpentAtBetween(groupId, startDateTime, endDateTime);
+          expenses = expenseRepository.findAllByGroup_IdAndSpentAtBetween(groupId, startDateTime, endDateTime);
       } else if (startDateTime != null) {
-          expenses = expenseRepository.findAllByGroup_GroupIdAndSpentAtGreaterThanEqual(groupId, startDateTime);
+          expenses = expenseRepository.findAllByGroup_IdAndSpentAtGreaterThanEqual(groupId, startDateTime);
       } else if (endDateTime != null) {
-          expenses = expenseRepository.findAllByGroup_GroupIdAndSpentAtLessThanEqual(groupId, endDateTime);
+          expenses = expenseRepository.findAllByGroup_IdAndSpentAtLessThanEqual(groupId, endDateTime);
       } else {
-          expenses = expenseRepository.findAllByGroup_GroupId(groupId);
+          expenses = expenseRepository.findAllByGroup_Id(groupId);
       }
       List<GroupExpenseResponse.ExpenseResponse> expenseResponses = new ArrayList<>();
 
