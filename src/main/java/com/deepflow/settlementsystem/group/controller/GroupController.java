@@ -4,6 +4,7 @@ import com.deepflow.settlementsystem.group.dto.request.*;
 import com.deepflow.settlementsystem.group.dto.response.*;
 import com.deepflow.settlementsystem.group.service.GroupService;
 import com.deepflow.settlementsystem.user.entity.User;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,6 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/groups")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "Authorization")
 public class GroupController {
 
     private final GroupService groupService;
