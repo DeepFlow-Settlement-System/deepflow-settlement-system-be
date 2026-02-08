@@ -31,6 +31,15 @@ services:
       db:
         condition: service_healthy
 
+  redis:
+    image: redis:7-alpine
+    container_name: settlement-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
   nginx:
     image: nginx:latest
     container_name: settlement-nginx
@@ -58,3 +67,4 @@ volumes:
   certbot-etc:
   certbot-var:
   db-data:
+  redis-data:

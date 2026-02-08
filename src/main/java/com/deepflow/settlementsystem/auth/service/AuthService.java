@@ -30,11 +30,16 @@ public class AuthService {
     private final UserService userService;
     private final RestClient restClient;
     private final KakaoProperties kakaoProperties;
+    private final KakaoTokenService kakaoTokenService;
 
     public LoginResponse kakaoLogin(String code) {
         String accessToken = getKakaoAccessToken(code);
         KakaoUserInfo kakaoUserInfo = getKakaoUserInfo(accessToken);
         User user = userService.getUserOrCreate(kakaoUserInfo);
+
+        if (!kakaoTokenService.hasKey(user.getId())) {
+            kakaoTokenService.saveKakaoToken(user.getId(), accessToken);
+        }
 
         return LoginResponse.builder()
                 .accessToken(jwtTokenProvider.createToken(user))
@@ -62,7 +67,7 @@ public class AuthService {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + kakaoAccessToken)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, (request, response) -> {
-                    log.error("카카오 User Info API 호출 실패: {}", response.getStatusCode());
+                    log.error("카카오 User Info API 호출 실패: {} {}", response.getStatusCode(), response.getBody());
                     throw new CustomException(ErrorCode.EXTERNAL_SERVER_ERROR);
                 })
                 .body(KakaoUserInfo.class);
@@ -83,7 +88,7 @@ public class AuthService {
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, (request, response) -> {
-                    log.error("카카오 Access Token API 호출 실패: {}", response.getStatusCode());
+                    log.error("카카오 Access Token API 호출 실패: {} {}", response.getStatusCode(), response.getBody());
                     throw new CustomException(ErrorCode.EXTERNAL_SERVER_ERROR);
                 })
                 .body(KakaoTokenResponse.class);

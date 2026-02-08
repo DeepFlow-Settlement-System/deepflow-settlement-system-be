@@ -18,6 +18,10 @@ spring:
 app:
   base-url: https://t2.mobidic.shop
   timezone: Asia/Seoul
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
 
 server:
   port: 8080
@@ -42,5 +46,5 @@ kakao:
 
 naver:
   ocr:
-    url:
-    secret:
+    url: ${NAVER_OCR_URL}
+    secret: ${NAVER_OCR_SECRET}
