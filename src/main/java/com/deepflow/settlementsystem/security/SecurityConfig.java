@@ -44,6 +44,7 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(
                                 "/api/auth/**",
+                                "/api/groups/join",
                                 "/v1/oauth/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
