@@ -51,7 +51,7 @@ public class ExpenseAllocation {
     private Integer shareAmount;        // 낼 금액
 
     @Column(name = "status")
-    private SettlementSatus status;              // UNSETTLED, REQUESTED, COMPLETED
+    private SettlementStatus status;              // UNSETTLED, REQUESTED, COMPLETED
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
