@@ -51,4 +51,6 @@ jobs:
       - name: Run tests with test profile
         env:
           SPRING_PROFILES_ACTIVE: test
+          NAVER_OCR_URL: ${{ secrets.NAVER_OCR_URL }}
+          NAVER_OCR_SECRET: ${{ secrets.NAVER_OCR_SECRET }}
         run: ./gradlew test
