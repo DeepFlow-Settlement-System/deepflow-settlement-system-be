@@ -17,7 +17,6 @@ import com.deepflow.settlementsystem.settlement.dto.response.KakaoSendMessageRes
 import com.deepflow.settlementsystem.settlement.dto.response.SettlementListResponse;
 import com.deepflow.settlementsystem.settlement.dto.response.SettlementResponse;
 import com.deepflow.settlementsystem.user.entity.User;
-import com.deepflow.settlementsystem.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,8 +41,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @Transactional(readOnly = true)
 public class SettlementService {
-    
-    private final UserRepository userRepository;
     private final RestClient restClient;
     private final KakaoTokenService kakaoTokenService;
     private final ObjectMapper objectMapper;
@@ -55,25 +52,20 @@ public class SettlementService {
      */
     @Transactional
     public void sendSettlementMessage(Long allocationId, Long receiverUserId) {
-        // 입력값 검증
-        if (allocationId == null) {
-            throw new CustomException(ErrorCode.INVALID_INPUT);
-        }
-        if (receiverUserId == null) {
-            throw new CustomException(ErrorCode.INVALID_INPUT);
-        }
+        validateNotNull(allocationId, "allocationId");
+        validateNotNull(receiverUserId, "receiverUserId");
         
-        // ExpenseAllocation 조회
         ExpenseAllocation allocation = expenseAllocationRepository.findByIdWithRelations(allocationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NO_SETTLEMENT));
+        
+        validateAllocationNotNull(allocation);
         
         // 돈을 받는 사람(receiver)만 요청 가능
         if (!allocation.getReceiver().getId().equals(receiverUserId)) {
             throw new CustomException(ErrorCode.NO_ACCESS_PERMISSION);
         }
         
-        // 이미 REQUESTED 상태인지 확인
-        if (allocation.getStatus() == SettlementStatus.REQUESTED) {
+        if (allocation.getStatus() == SettlementStatus.COMPLETED) {
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
         
@@ -83,24 +75,21 @@ public class SettlementService {
         User sender = allocation.getSender();
         Long amount = allocation.getShareAmount().longValue();
         
-        // receiver의 카카오페이 링크가 필요 (receiver가 돈을 받아야 하므로)
         if (receiver.getKakaoPaySuffix() == null || receiver.getKakaoPaySuffix().isEmpty()) {
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
         
-        // Access token 조회 (receiver의 토큰 사용 - receiver가 메시지를 보냄)
         String accessToken = kakaoTokenService.getKakaoAccessToken(receiverUserId);
         if (accessToken == null || accessToken.isEmpty()) {
+            log.warn("카카오 Access Token이 없습니다. receiverUserId: {}", receiverUserId);
             throw new CustomException(ErrorCode.INVALID_TOKEN);
         }
         
         // 돈을 보낼 사람(sender)의 UUID 찾기
         String senderUuid = findUserUuidByUserId(accessToken, sender.getId());
         
-        // 송금 링크 생성 (receiver의 카카오페이 링크 - receiver에게 돈을 보내는 링크)
+        // 송금 링크 생성
         String paymentLink = generatePaymentLink(receiver.getKakaoPaySuffix(), amount);
-        
-        // 그룹명과 지출 내역 가져오기
         String groupName = allocation.getGroup().getName();
         List<SettlementItem> items = getSettlementItems(allocation);
         
@@ -111,10 +100,8 @@ public class SettlementService {
                 amount
         );
         
-        // 카카오 메시지 전송 API 호출 (receiver가 sender에게 전송)
+        // 카카오 메시지 전송 API 호출
         sendKakaoMessage(accessToken, senderUuid, message);
-        
-        // 상태를 REQUESTED로 변경
         allocation.setStatus(SettlementStatus.REQUESTED);
         expenseAllocationRepository.save(allocation);
     }
@@ -126,7 +113,6 @@ public class SettlementService {
      * @return 사용자의 UUID
      */
     private String findUserUuidByUserId(String accessToken, Long targetUserId) {
-        // 친구 목록에서 찾기 (페이지네이션 포함)
         String currentAfterUrl = null;
         int maxPages = 1000;
         int pageCount = 0;
@@ -145,7 +131,6 @@ public class SettlementService {
         } while (currentAfterUrl != null && pageCount < maxPages);
         
         log.warn("카카오 친구 목록에서 사용자를 찾지 못했습니다. targetUserId: {}", targetUserId);
-        
         throw new CustomException(ErrorCode.USER_NOT_FOUND);
     }
     
@@ -188,13 +173,8 @@ public class SettlementService {
     }
     
     private String generatePaymentLink(String kakaoPaySuffix, Long amount) {
-        // 입력값 검증
-        if (kakaoPaySuffix == null || kakaoPaySuffix.isEmpty()) {
-            throw new CustomException(ErrorCode.INVALID_INPUT);
-        }
-        if (amount == null || amount <= 0) {
-            throw new CustomException(ErrorCode.INVALID_INPUT);
-        }
+        validateNotBlank(kakaoPaySuffix, "kakaoPaySuffix");
+        validatePositive(amount, "amount");
         
         long multipliedAmount = amount * 8;
         String hexAmount = Long.toHexString(multipliedAmount).toUpperCase();
@@ -264,22 +244,12 @@ public class SettlementService {
     }
     
     private void sendKakaoMessage(String accessToken, String receiverUuid, KakaoMessageRequest message) {
-        // 입력값 검증
-        if (accessToken == null || accessToken.isEmpty()) {
-            throw new CustomException(ErrorCode.INVALID_TOKEN);
-        }
-        if (receiverUuid == null || receiverUuid.isEmpty()) {
-            throw new CustomException(ErrorCode.INVALID_INPUT);
-        }
+        validateNotBlank(accessToken, "accessToken");
+        validateNotBlank(receiverUuid, "receiverUuid");
         
         try {
-            // receiver_uuids를 JSON 배열 문자열로 변환: ["uuid"]
             String receiverUuidsJson = objectMapper.writeValueAsString(List.of(receiverUuid));
-            
-            // template_object를 JSON 문자열로 변환
             String templateObjectJson = objectMapper.writeValueAsString(message);
-            
-            // form-urlencoded 형식으로 요청 본문 생성
             String requestBody = "receiver_uuids=" + URLEncoder.encode(receiverUuidsJson, StandardCharsets.UTF_8)
                     + "&template_object=" + URLEncoder.encode(templateObjectJson, StandardCharsets.UTF_8);
             
@@ -319,7 +289,8 @@ public class SettlementService {
         ExpenseAllocation allocation = expenseAllocationRepository.findByIdWithRelations(allocationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NO_SETTLEMENT));
         
-        // 사용자가 sender 또는 receiver인지 확인
+        validateAllocationNotNull(allocation);
+        
         if (!allocation.getSender().getId().equals(userId) && !allocation.getReceiver().getId().equals(userId)) {
             throw new CustomException(ErrorCode.NO_ACCESS_PERMISSION);
         }
@@ -336,12 +307,13 @@ public class SettlementService {
         ExpenseAllocation allocation = expenseAllocationRepository.findByIdWithRelations(allocationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NO_SETTLEMENT));
         
+        validateAllocationNotNull(allocation);
+        
         // 돈을 받는 사람(receiver)만 완료 처리 가능
         if (!allocation.getReceiver().getId().equals(userId)) {
             throw new CustomException(ErrorCode.NO_ACCESS_PERMISSION);
         }
         
-        // REQUESTED 상태인지 확인
         if (allocation.getStatus() != SettlementStatus.REQUESTED) {
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
@@ -374,7 +346,7 @@ public class SettlementService {
             return items;
         }
         
-        // N빵인 경우
+        // 1/N인 경우
         if (expense.getSettlementType() == SettlementType.N_BBANG) {
             items.add(new SettlementItem(expense.getTitle(), expense.getTotalAmount().longValue()));
         } 
@@ -389,6 +361,8 @@ public class SettlementService {
     
     // ExpenseAllocation을 SettlementResponse로 변환
     private SettlementResponse toSettlementResponse(ExpenseAllocation allocation) {
+        validateAllocationNotNull(allocation);
+        
         return SettlementResponse.builder()
                 .allocationId(allocation.getAllocationId())
                 .groupId(allocation.getGroup().getId())
@@ -403,6 +377,55 @@ public class SettlementService {
                 .status(allocation.getStatus())
                 .createdAt(allocation.getCreatedAt())
                 .build();
+    }
+    
+    /**
+     * ExpenseAllocation의 필수 필드 null 검증
+     * @param allocation 검증할 ExpenseAllocation
+     */
+    private void validateAllocationNotNull(ExpenseAllocation allocation) {
+        if (allocation.getGroup() == null) {
+            throw new CustomException(ErrorCode.NO_SETTLEMENT);
+        }
+        if (allocation.getSender() == null) {
+            throw new CustomException(ErrorCode.NO_SETTLEMENT);
+        }
+        if (allocation.getReceiver() == null) {
+            throw new CustomException(ErrorCode.NO_SETTLEMENT);
+        }
+    }
+    
+    /**
+     * 값이 null인지 검증
+     * @param value 검증할 값
+     * @param fieldName 필드명 (에러 식별용)
+     */
+    private void validateNotNull(Object value, String fieldName) {
+        if (value == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+    }
+    
+    /**
+     * 문자열이 null이거나 비어있는지 검증
+     * @param value 검증할 문자열
+     * @param fieldName 필드명 (에러 식별용)
+     */
+    private void validateNotBlank(String value, String fieldName) {
+        if (value == null || value.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+    }
+    
+    /**
+     * 양수인지 검증
+     * @param value 검증할 값
+     * @param fieldName 필드명 (에러 식별용)
+     */
+    private void validatePositive(Long value, String fieldName) {
+        if (value == null || value <= 0) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
     }
     
 }
