@@ -31,6 +31,12 @@ public class GroupService {
     @Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
 
+    /**
+     * 그룹 생성
+     * @param request 그룹 생성 요청 정보
+     * @param user 그룹을 생성하는 사용자
+     * @return 생성된 그룹 정보
+     */
     @Transactional
     public GroupResponse createGroup(GroupCreateRequest request, User user) {
         // 그룹 생성
@@ -58,13 +64,25 @@ public class GroupService {
         return toGroupResponse(group, room);
     }
 
+    /**
+     * 사용자가 참여한 그룹 목록 조회
+     * @param user 조회할 사용자
+     * @return 사용자가 참여한 그룹 목록
+     */
     public List<GroupResponse> getMyGroups(User user) {
         List<Group> groups = groupRepository.findAllByUserId(user.getId());
         return groups.stream()
+                .filter(group -> group.getRoom() != null)
                 .map(group -> toGroupResponse(group, group.getRoom()))
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 그룹 상세 정보 조회
+     * @param groupId 그룹 ID
+     * @param user 조회하는 사용자
+     * @return 그룹 상세 정보 및 멤버 목록
+     */
     public GroupDetailResponse getGroupDetail(Long groupId, User user) {
         Group group = groupRepository.findByIdWithRoom(groupId)
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
@@ -97,6 +115,12 @@ public class GroupService {
                 .build();
     }
 
+    /**
+     * 그룹 초대 코드 조회
+     * @param groupId 그룹 ID
+     * @param user 조회하는 사용자
+     * @return 그룹 초대 코드 및 초대 링크
+     */
     public InviteCodeResponse getInviteCode(Long groupId, User user) {
         Group group = groupRepository.findByIdWithRoom(groupId)
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
@@ -115,14 +139,17 @@ public class GroupService {
                 .build();
     }
 
-    // 초대 코드로 그룹 정보 조회 (인증 불필요)
+    /**
+     * 초대 코드로 그룹 정보 조회
+     * @param inviteCode 초대 코드
+     * @return 그룹 정보 (인증 불필요)
+     */
     public GroupJoinInfoResponse getJoinInfo(String inviteCode) {
-        Room room = roomRepository.findByInviteCode(inviteCode)
+        Room room = roomRepository.findByInviteCodeWithGroup(inviteCode)
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_INVITE_CODE));
 
-        // 만료 체크
-        if (room.isExpired()) {
-            throw new CustomException(ErrorCode.INVITE_CODE_EXPIRED);
+        if (room.getGroup() == null) {
+            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
         }
 
         return GroupJoinInfoResponse.builder()
@@ -133,18 +160,21 @@ public class GroupService {
                 .build();
     }
 
-    // 그룹 참여 (인증 선택적)
+    /**
+     * 그룹 참여
+     * @param inviteCode 초대 코드
+     * @param user 참여할 사용자 (null이면 예외 발생)
+     * @return 그룹 참여 결과
+     */
     @Transactional
     public RoomJoinResponse joinRoom(String inviteCode, User user) {
-        Room room = roomRepository.findByInviteCode(inviteCode)
+        Room room = roomRepository.findByInviteCodeWithGroup(inviteCode)
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_INVITE_CODE));
 
-        // 만료 체크
-        if (room.isExpired()) {
-            throw new CustomException(ErrorCode.INVITE_CODE_EXPIRED);
+        if (room.getGroup() == null) {
+            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
         }
 
-        // user가 null이면 (비로그인) 예외 발생
         if (user == null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
@@ -168,10 +198,19 @@ public class GroupService {
                 .build();
     }
 
+    /**
+     * 그룹 탈퇴
+     * @param groupId 그룹 ID
+     * @param user 탈퇴할 사용자
+     */
     @Transactional
     public void leaveGroup(Long groupId, User user) {
         Group group = groupRepository.findByIdWithRoom(groupId)
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        if (group.getRoom() == null) {
+            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
+        }
 
         Member member = memberRepository.findByRoomIdAndUserId(group.getRoom().getId(), user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_GROUP_MEMBER));
@@ -181,7 +220,6 @@ public class GroupService {
         // 모든 인원이 나갔는지 확인
         List<Member> remainingMembers = memberRepository.findByRoomId(group.getRoom().getId());
         if (remainingMembers.isEmpty()) {
-            // 그룹과 방 삭제 (Cascade로 인해 Room도 함께 삭제됨)
             groupRepository.delete(group);
         }
     }

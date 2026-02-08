@@ -8,5 +8,5 @@
 
 ### Backend
 - **Java**: 17
-- **Spring Boot**: 4.0.2
+- **Spring Boot**: 3.4.3
 - **Build Tool**: Gradle (Groovy DSL)

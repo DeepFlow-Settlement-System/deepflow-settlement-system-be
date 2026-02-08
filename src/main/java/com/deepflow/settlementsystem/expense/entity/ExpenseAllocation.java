@@ -40,11 +40,11 @@ public class ExpenseAllocation {
     private ExpenseItem item;
 
     @ManyToOne
-    @JoinColumn(name = "sender_id")     // 돈을 보낼 사람
+    @JoinColumn(name = "sender_id")     // 돈을 보낼 사람 (메시지를 받는 사람)
     private User sender;
 
     @ManyToOne
-    @JoinColumn(name = "receiver_id")   // 돈을 받을 사람
+    @JoinColumn(name = "receiver_id")   // 돈을 받는 사람 (메시지를 보내는 사람)
     private User receiver;
 
     @Column(name = "share_amount")
