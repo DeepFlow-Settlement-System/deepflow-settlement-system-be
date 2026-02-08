@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
                 "3) 상태가 SUCCESS면 영수증 결과 조회<br>" +
                 "4) OCR 결과로 지출 등록 항목 자동 채우기"
 )
+@SecurityRequirement(name = "Authorization")
 public class ExpenseController {
 
   private final ExpenseService expenseService;
