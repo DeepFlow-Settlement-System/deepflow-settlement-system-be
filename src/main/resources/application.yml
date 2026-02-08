@@ -14,14 +14,14 @@ spring:
       ddl-auto: update
   application:
     name: settlement-system
-
-app:
-  base-url: https://t2.mobidic.shop
-  timezone: Asia/Seoul
   data:
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
+
+app:
+  base-url: https://t2.mobidic.shop
+  timezone: Asia/Seoul
 
 server:
   port: 8080
