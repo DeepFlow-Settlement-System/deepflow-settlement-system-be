@@ -11,6 +11,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +32,19 @@ public class Group {
     @Column(length = 500)
     private String description;
 
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
+    private byte[] imageData;
+
+    @Column(length = 50)
+    private String imageContentType;
+
+    @Column
+    private LocalDate startDate;
+
+    @Column
+    private LocalDate endDate;
+
     @OneToOne(mappedBy = "group", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Room room;
 
@@ -43,9 +57,23 @@ public class Group {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Group(String name, String description) {
+    public Group(String name, String description, byte[] imageData, String imageContentType, LocalDate startDate, LocalDate endDate) {
         this.name = name;
         this.description = description;
+        this.imageData = imageData;
+        this.imageContentType = imageContentType;
+        this.startDate = startDate;
+        this.endDate = endDate;
+    }
+    
+    public void updateImage(byte[] imageData, String imageContentType) {
+        this.imageData = imageData;
+        this.imageContentType = imageContentType;
+    }
+    
+    public void deleteImage() {
+        this.imageData = null;
+        this.imageContentType = null;
     }
 
     public void setRoom(Room room) {

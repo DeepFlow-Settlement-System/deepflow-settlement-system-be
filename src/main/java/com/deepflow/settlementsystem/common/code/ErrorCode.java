@@ -18,7 +18,6 @@ public enum ErrorCode {
     VALIDATION_INVALID_SIZE("입력값의 길이가 올바르지 않습니다.", HttpStatus.BAD_REQUEST),
     REQUIRED_FIELD("필수 입력값이 누락되었습니다.", HttpStatus.BAD_REQUEST),
     INVALID_INVITE_CODE("유효하지 않은 초대 코드입니다.", HttpStatus.BAD_REQUEST),
-    INVITE_CODE_EXPIRED("초대 코드가 만료되었습니다.", HttpStatus.BAD_REQUEST),
     ALREADY_MEMBER("이미 해당 그룹의 멤버입니다.", HttpStatus.BAD_REQUEST),
     NO_MEMBERS("방에 멤버가 없습니다.", HttpStatus.BAD_REQUEST),
     NO_EXPENSES("지출 내역이 없습니다.", HttpStatus.BAD_REQUEST),

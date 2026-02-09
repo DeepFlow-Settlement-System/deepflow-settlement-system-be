@@ -5,6 +5,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 @Getter
 @NoArgsConstructor
 public class GroupCreateRequest {
@@ -15,4 +17,8 @@ public class GroupCreateRequest {
 
     @Size(max = 500)
     private String description;
+
+    private LocalDate startDate;
+
+    private LocalDate endDate;
 }

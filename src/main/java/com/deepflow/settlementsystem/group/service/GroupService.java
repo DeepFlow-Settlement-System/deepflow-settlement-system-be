@@ -12,17 +12,27 @@ import com.deepflow.settlementsystem.group.repository.MemberRepository;
 import com.deepflow.settlementsystem.group.repository.RoomRepository;
 import com.deepflow.settlementsystem.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional(readOnly = true)
 public class GroupService {
+
+    private static final List<String> ALLOWED_IMAGE_TYPES = Arrays.asList(
+            "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"
+    );
+    private static final long MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
 
     private final GroupRepository groupRepository;
     private final RoomRepository roomRepository;
@@ -43,6 +53,8 @@ public class GroupService {
         Group group = Group.builder()
                 .name(request.getName())
                 .description(request.getDescription())
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
                 .build();
 
         group = groupRepository.save(group);
@@ -103,10 +115,17 @@ public class GroupService {
                         .build())
                 .collect(Collectors.toList());
 
+        String imageUrl = group.getImageData() != null 
+                ? baseUrl + "/api/groups/" + groupId + "/image" 
+                : null;
+
         return GroupDetailResponse.builder()
                 .id(group.getId())
                 .name(group.getName())
                 .description(group.getDescription())
+                .imageUrl(imageUrl)
+                .startDate(group.getStartDate())
+                .endDate(group.getEndDate())
                 .inviteCode(group.getRoom().getInviteCode())
                 .inviteLink(generateInviteLink(group.getRoom().getInviteCode()))
                 .members(memberResponses)
@@ -152,10 +171,17 @@ public class GroupService {
             throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
         }
 
+        String imageUrl = room.getGroup().getImageData() != null 
+                ? baseUrl + "/api/groups/" + room.getGroup().getId() + "/image" 
+                : null;
+
         return GroupJoinInfoResponse.builder()
                 .groupId(room.getGroup().getId())
                 .groupName(room.getGroup().getName())
                 .groupDescription(room.getGroup().getDescription())
+                .imageUrl(imageUrl)
+                .startDate(room.getGroup().getStartDate())
+                .endDate(room.getGroup().getEndDate())
                 .inviteCode(inviteCode)
                 .build();
     }
@@ -224,11 +250,135 @@ public class GroupService {
         }
     }
 
+    /**
+     * 그룹 이미지 업로드
+     * @param groupId 그룹 ID
+     * @param file 업로드할 이미지 파일
+     * @param user 업로드하는 사용자
+     * @return 업로드된 이미지 URL
+     */
+    @Transactional
+    public String uploadGroupImage(Long groupId, MultipartFile file, User user) {
+        Group group = groupRepository.findByIdWithRoom(groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        // 사용자가 해당 그룹의 멤버인지 확인
+        boolean isMember = memberRepository.existsByRoomIdAndUserId(group.getRoom().getId(), user.getId());
+        if (!isMember) {
+            throw new CustomException(ErrorCode.NO_ACCESS_PERMISSION);
+        }
+
+        // 파일 유효성 검증
+        validateImageFile(file);
+
+        try {
+            // 바이트 배열로 변환
+            byte[] imageData = file.getBytes();
+            String contentType = file.getContentType();
+
+            // 그룹에 이미지 저장
+            group.updateImage(imageData, contentType);
+            groupRepository.save(group);
+
+            // 이미지 URL 반환
+            String imageUrl = baseUrl + "/api/groups/" + groupId + "/image";
+            log.info("그룹 이미지 업로드 완료: groupId={}", groupId);
+            return imageUrl;
+
+        } catch (IOException e) {
+            log.error("이미지 파일 읽기 중 오류 발생", e);
+            throw new CustomException(ErrorCode.EXTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * 그룹 이미지 삭제
+     * @param groupId 그룹 ID
+     * @param user 삭제하는 사용자
+     */
+    @Transactional
+    public void deleteGroupImage(Long groupId, User user) {
+        Group group = groupRepository.findByIdWithRoom(groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        // 사용자가 해당 그룹의 멤버인지 확인
+        boolean isMember = memberRepository.existsByRoomIdAndUserId(group.getRoom().getId(), user.getId());
+        if (!isMember) {
+            throw new CustomException(ErrorCode.NO_ACCESS_PERMISSION);
+        }
+
+        group.deleteImage();
+        groupRepository.save(group);
+        log.info("그룹 이미지 삭제 완료: groupId={}", groupId);
+    }
+
+    /**
+     * 그룹 이미지 조회
+     * @param groupId 그룹 ID
+     * @return 이미지 데이터와 Content-Type
+     */
+    public ImageData getGroupImage(Long groupId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        if (group.getImageData() == null || group.getImageData().length == 0) {
+            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
+        }
+
+        return new ImageData(group.getImageData(), group.getImageContentType());
+    }
+
+    /**
+     * 이미지 파일 유효성 검증
+     */
+    private void validateImageFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+    }
+
+    /**
+     * 이미지 데이터와 Content-Type을 담는 클래스
+     */
+    public static class ImageData {
+        private final byte[] data;
+        private final String contentType;
+
+        public ImageData(byte[] data, String contentType) {
+            this.data = data;
+            this.contentType = contentType != null ? contentType : "image/jpeg";
+        }
+
+        public byte[] getData() {
+            return data;
+        }
+
+        public String getContentType() {
+            return contentType;
+        }
+    }
+
     private GroupResponse toGroupResponse(Group group, Room room) {
+        String imageUrl = group.getImageData() != null 
+                ? baseUrl + "/api/groups/" + group.getId() + "/image" 
+                : null;
+
         return GroupResponse.builder()
                 .id(group.getId())
                 .name(group.getName())
                 .description(group.getDescription())
+                .imageUrl(imageUrl)
+                .startDate(group.getStartDate())
+                .endDate(group.getEndDate())
                 .inviteCode(room.getInviteCode())
                 .inviteLink(generateInviteLink(room.getInviteCode()))
                 .createdAt(group.getCreatedAt())
