@@ -1,6 +1,7 @@
 package com.deepflow.settlementsystem.expense.repository;
 
 import com.deepflow.settlementsystem.expense.entity.ExpenseAllocation;
+import com.deepflow.settlementsystem.expense.entity.SettlementStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,4 +34,17 @@ public interface ExpenseItemAllocationRepository extends JpaRepository<ExpenseAl
            "LEFT JOIN FETCH ea.expense " +
            "WHERE ea.sender.id = :senderId AND ea.receiver.id = :receiverId")
     List<ExpenseAllocation> findBySenderIdAndReceiverId(@Param("senderId") Long senderId, @Param("receiverId") Long receiverId);
+    
+    @Query("SELECT ea FROM ExpenseAllocation ea " +
+           "LEFT JOIN FETCH ea.sender " +
+           "LEFT JOIN FETCH ea.receiver " +
+           "LEFT JOIN FETCH ea.group " +
+           "LEFT JOIN FETCH ea.expense " +
+           "WHERE ea.sender.id = :senderId AND ea.receiver.id = :receiverId " +
+           "AND ea.status IN :statuses")
+    List<ExpenseAllocation> findBySenderIdAndReceiverIdAndStatusIn(
+            @Param("senderId") Long senderId,
+            @Param("receiverId") Long receiverId,
+            @Param("statuses") List<SettlementStatus> statuses
+    );
 }

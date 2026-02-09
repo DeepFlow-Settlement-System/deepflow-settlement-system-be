@@ -16,7 +16,9 @@ import com.deepflow.settlementsystem.settlement.dto.response.KakaoFriendsRespons
 import com.deepflow.settlementsystem.settlement.dto.response.KakaoSendMessageResponse;
 import com.deepflow.settlementsystem.settlement.dto.response.SettlementListResponse;
 import com.deepflow.settlementsystem.settlement.dto.response.SettlementResponse;
+import com.deepflow.settlementsystem.settlement.dto.response.SettlementSummaryResponse;
 import com.deepflow.settlementsystem.user.entity.User;
+import com.deepflow.settlementsystem.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,36 +47,58 @@ public class SettlementService {
     private final KakaoTokenService kakaoTokenService;
     private final ObjectMapper objectMapper;
     private final ExpenseItemAllocationRepository expenseAllocationRepository;
+    private final UserRepository userRepository;
     
     /**
      * 정산 요청 메시지 전송
      * 돈을 받는 사람(receiver)이 돈을 보낼 사람(sender)에게 카카오톡 메시지를 전송합니다.
+     * 상태를 선택하여 요청하거나 통합적으로 한번에 요청할 수 있습니다.
      */
     @Transactional
-    public void sendSettlementMessage(Long allocationId, Long receiverUserId) {
-        validateNotNull(allocationId, "allocationId");
+    public void sendSettlementMessage(Long targetUserId, List<SettlementStatus> statuses, Long receiverUserId) {
+        validateNotNull(targetUserId, "targetUserId");
         validateNotNull(receiverUserId, "receiverUserId");
         
-        ExpenseAllocation allocation = expenseAllocationRepository.findByIdWithRelations(allocationId)
-                .orElseThrow(() -> new CustomException(ErrorCode.NO_SETTLEMENT));
+        // 상태 필터 설정: null이면 UNSETTLED, REQUESTED 모두 포함
+        List<SettlementStatus> targetStatuses = (statuses == null || statuses.isEmpty()) 
+            ? List.of(SettlementStatus.UNSETTLED, SettlementStatus.REQUESTED)
+            : statuses;
         
-        validateAllocationNotNull(allocation);
+        // 두 사용자 간의 정산 건 조회 (상태 필터 적용)
+        List<ExpenseAllocation> allocations = expenseAllocationRepository
+                .findBySenderIdAndReceiverIdAndStatusIn(targetUserId, receiverUserId, targetStatuses);
         
-        // 돈을 받는 사람(receiver)만 요청 가능
-        if (!allocation.getReceiver().getId().equals(receiverUserId)) {
+        if (allocations.isEmpty()) {
+            throw new CustomException(ErrorCode.NO_SETTLEMENT);
+        }
+        
+        // 첫 번째 allocation에서 receiver 정보 가져오기
+        ExpenseAllocation firstAllocation = allocations.get(0);
+        validateAllocationNotNull(firstAllocation);
+        
+        User receiver = firstAllocation.getReceiver();
+        User sender = firstAllocation.getSender();
+        
+        // 권한 확인
+        if (!receiver.getId().equals(receiverUserId)) {
             throw new CustomException(ErrorCode.NO_ACCESS_PERMISSION);
         }
         
-        if (allocation.getStatus() == SettlementStatus.COMPLETED) {
-            throw new CustomException(ErrorCode.INVALID_INPUT);
+        // COMPLETED 상태는 제외
+        allocations = allocations.stream()
+                .filter(allocation -> allocation.getStatus() != SettlementStatus.COMPLETED)
+                .collect(Collectors.toList());
+        
+        if (allocations.isEmpty()) {
+            throw new CustomException(ErrorCode.NO_SETTLEMENT);
         }
         
-        // 돈을 받는 사람 (메시지를 보내는 사람)
-        User receiver = allocation.getReceiver();
-        // 돈을 보낼 사람 (메시지를 받는 사람)
-        User sender = allocation.getSender();
-        Long amount = allocation.getShareAmount().longValue();
+        // 총 금액 계산
+        Long totalAmount = allocations.stream()
+                .mapToLong(allocation -> allocation.getShareAmount().longValue())
+                .sum();
         
+        // 필수 정보 확인
         if (receiver.getKakaoPaySuffix() == null || receiver.getKakaoPaySuffix().isEmpty()) {
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
@@ -85,25 +109,32 @@ public class SettlementService {
             throw new CustomException(ErrorCode.INVALID_TOKEN);
         }
         
-        // 돈을 보낼 사람(sender)의 UUID 찾기
+        // sender의 UUID 찾기
         String senderUuid = findUserUuidByUserId(accessToken, sender.getId());
         
         // 송금 링크 생성
-        String paymentLink = generatePaymentLink(receiver.getKakaoPaySuffix(), amount);
-        String groupName = allocation.getGroup().getName();
-        List<SettlementItem> items = getSettlementItems(allocation);
+        String paymentLink = generatePaymentLink(receiver.getKakaoPaySuffix(), totalAmount);
+        String groupName = firstAllocation.getGroup().getName();
         
+        // 모든 정산 건의 아이템 수집
+        List<SettlementItem> items = getAllocationItems(allocations);
+        
+        // 메시지 생성
         KakaoMessageRequest message = createSettlementMessage(
                 paymentLink,
                 groupName,
                 items,
-                amount
+                totalAmount
         );
         
-        // 카카오 메시지 전송 API 호출
+        // 카카오 메시지 전송
         sendKakaoMessage(accessToken, senderUuid, message);
-        allocation.setStatus(SettlementStatus.REQUESTED);
-        expenseAllocationRepository.save(allocation);
+        
+        // 모든 allocation의 상태를 REQUESTED로 변경
+        allocations.forEach(allocation -> {
+            allocation.setStatus(SettlementStatus.REQUESTED);
+            expenseAllocationRepository.save(allocation);
+        });
     }
     
     /**
@@ -357,6 +388,89 @@ public class SettlementService {
         }
         
         return items;
+    }
+    
+    // 여러 allocation에서 아이템 수집
+    private List<SettlementItem> getAllocationItems(List<ExpenseAllocation> allocations) {
+        List<SettlementItem> items = new ArrayList<>();
+        
+        for (ExpenseAllocation allocation : allocations) {
+            Expense expense = allocation.getExpense();
+            if (expense == null) continue;
+            
+            if (expense.getSettlementType() == SettlementType.N_BBANG) {
+                items.add(new SettlementItem(expense.getTitle(), expense.getTotalAmount().longValue()));
+            } else if (expense.getSettlementType() == SettlementType.ITEMIZED && allocation.getItem() != null) {
+                ExpenseItem item = allocation.getItem();
+                items.add(new SettlementItem(item.getItemName(), item.getLineAmount().longValue()));
+            }
+        }
+        
+        return items;
+    }
+    
+    /**
+     * 로그인한 사용자와 특정 사용자 간의 정산 건을 상태별로 묶어서 금액 조회
+     */
+    public SettlementSummaryResponse getSettlementSummary(Long userId, Long targetUserId) {
+        validateNotNull(userId, "userId");
+        validateNotNull(targetUserId, "targetUserId");
+        
+        // 두 사용자 간의 모든 정산 건 조회 (양방향)
+        List<ExpenseAllocation> allocations = expenseAllocationRepository
+                .findBySenderIdAndReceiverId(targetUserId, userId);
+        
+        List<ExpenseAllocation> reverseAllocations = expenseAllocationRepository
+                .findBySenderIdAndReceiverId(userId, targetUserId);
+        
+        // 두 방향 모두 합치기
+        List<ExpenseAllocation> allAllocations = new ArrayList<>();
+        allAllocations.addAll(allocations);
+        allAllocations.addAll(reverseAllocations);
+        
+        // 상대방 사용자 정보 조회
+        User targetUser = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        
+        if (allAllocations.isEmpty()) {
+            return SettlementSummaryResponse.builder()
+                    .targetUserId(targetUserId)
+                    .targetUserNickname(targetUser.getNickname())
+                    .totalUnsettledAmount(0L)
+                    .totalRequestedAmount(0L)
+                    .totalCompletedAmount(0L)
+                    .totalAmount(0L)
+                    .build();
+        }
+        
+        // 상태별 금액 계산
+        Long totalUnsettledAmount = allAllocations.stream()
+                .filter(a -> a.getStatus() == SettlementStatus.UNSETTLED)
+                .mapToLong(a -> a.getShareAmount().longValue())
+                .sum();
+        
+        Long totalRequestedAmount = allAllocations.stream()
+                .filter(a -> a.getStatus() == SettlementStatus.REQUESTED)
+                .mapToLong(a -> a.getShareAmount().longValue())
+                .sum();
+        
+        Long totalCompletedAmount = allAllocations.stream()
+                .filter(a -> a.getStatus() == SettlementStatus.COMPLETED)
+                .mapToLong(a -> a.getShareAmount().longValue())
+                .sum();
+        
+        Long totalAmount = allAllocations.stream()
+                .mapToLong(a -> a.getShareAmount().longValue())
+                .sum();
+        
+        return SettlementSummaryResponse.builder()
+                .targetUserId(targetUserId)
+                .targetUserNickname(targetUser.getNickname())
+                .totalUnsettledAmount(totalUnsettledAmount)
+                .totalRequestedAmount(totalRequestedAmount)
+                .totalCompletedAmount(totalCompletedAmount)
+                .totalAmount(totalAmount)
+                .build();
     }
     
     // ExpenseAllocation을 SettlementResponse로 변환

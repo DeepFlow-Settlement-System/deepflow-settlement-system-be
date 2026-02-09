@@ -3,6 +3,7 @@ package com.deepflow.settlementsystem.settlement.controller;
 import com.deepflow.settlementsystem.settlement.dto.request.SettlementSendRequest;
 import com.deepflow.settlementsystem.settlement.dto.response.SettlementListResponse;
 import com.deepflow.settlementsystem.settlement.dto.response.SettlementResponse;
+import com.deepflow.settlementsystem.settlement.dto.response.SettlementSummaryResponse;
 import com.deepflow.settlementsystem.settlement.service.SettlementService;
 import com.deepflow.settlementsystem.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
@@ -53,7 +54,7 @@ public class SettlementController {
     @Operation(
             summary = "정산 요청 메시지 전송",
             description = "카카오톡으로 정산 요청 메시지를 전송합니다. 돈을 받는 사람(receiver)만 요청할 수 있으며, " +
-                    "메시지를 받는 사람(sender)에게 카카오페이 송금 링크가 포함된 메시지가 전송됩니다."
+                    "상태를 선택하여 요청하거나 통합적으로 한번에 요청할 수 있습니다."
     )
     @PostMapping("/send")
     public ResponseEntity<Void> sendSettlementMessage(
@@ -62,10 +63,25 @@ public class SettlementController {
             @Parameter(description = "현재 로그인한 사용자 (receiver)", required = true, hidden = true)
             @AuthenticationPrincipal @NotNull User receiver) {
         settlementService.sendSettlementMessage(
-                request.getAllocationId(),
+                request.getTargetUserId(),
+                request.getStatuses(),
                 receiver.getId()
         );
         return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+    
+    @Operation(
+            summary = "사용자 간 정산 요약 조회",
+            description = "로그인한 사용자와 특정 사용자 간의 정산 건을 상태별로 묶어서 금액을 조회합니다."
+    )
+    @GetMapping("/summary/{targetUserId}")
+    public ResponseEntity<SettlementSummaryResponse> getSettlementSummary(
+            @Parameter(description = "상대방 사용자 ID", required = true, example = "1")
+            @PathVariable Long targetUserId,
+            @Parameter(description = "현재 로그인한 사용자", required = true, hidden = true)
+            @AuthenticationPrincipal @NotNull User user) {
+        SettlementSummaryResponse response = settlementService.getSettlementSummary(user.getId(), targetUserId);
+        return ResponseEntity.ok(response);
     }
 
     @Operation(
