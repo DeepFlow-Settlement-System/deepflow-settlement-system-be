@@ -7,12 +7,15 @@ import com.deepflow.settlementsystem.user.entity.User;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
@@ -68,6 +71,47 @@ public class GroupController {
             @AuthenticationPrincipal User user) {
         InviteCodeResponse response = groupService.getInviteCode(groupId, user);
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "그룹 이미지 업로드", description = "그룹 이미지를 업로드합니다.")
+    @PostMapping("/{groupId}/image")
+    public ResponseEntity<String> uploadGroupImage(
+            @Parameter(description = "그룹 ID", required = true, example = "1")
+            @PathVariable Long groupId,
+            @Parameter(description = "이미지 파일", required = true)
+            @RequestParam("file") MultipartFile file,
+            @Parameter(description = "현재 로그인한 사용자", required = true, hidden = true)
+            @AuthenticationPrincipal User user) {
+        String imageUrl = groupService.uploadGroupImage(groupId, file, user);
+        return ResponseEntity.ok(imageUrl);
+    }
+
+    @Operation(summary = "그룹 이미지 조회", description = "그룹 이미지를 조회합니다.")
+    @GetMapping("/{groupId}/image")
+    public ResponseEntity<byte[]> getGroupImage(
+            @Parameter(description = "그룹 ID", required = true, example = "1")
+            @PathVariable Long groupId) {
+        GroupService.ImageData imageData = groupService.getGroupImage(groupId);
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(imageData.getContentType()));
+        headers.setContentLength(imageData.getData().length);
+        headers.setCacheControl("public, max-age=3600");
+        
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(imageData.getData());
+    }
+
+    @Operation(summary = "그룹 이미지 삭제", description = "그룹 이미지를 삭제합니다.")
+    @DeleteMapping("/{groupId}/image")
+    public ResponseEntity<Void> deleteGroupImage(
+            @Parameter(description = "그룹 ID", required = true, example = "1")
+            @PathVariable Long groupId,
+            @Parameter(description = "현재 로그인한 사용자", required = true, hidden = true)
+            @AuthenticationPrincipal User user) {
+        groupService.deleteGroupImage(groupId, user);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "그룹 탈퇴", description = "그룹을 탈퇴합니다.")

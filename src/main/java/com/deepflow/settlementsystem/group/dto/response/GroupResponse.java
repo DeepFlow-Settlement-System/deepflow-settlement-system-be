@@ -3,6 +3,7 @@ package com.deepflow.settlementsystem.group.dto.response;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -11,6 +12,9 @@ public class GroupResponse {
     private Long id;
     private String name;
     private String description;
+    private String imageUrl;
+    private LocalDate startDate;
+    private LocalDate endDate;
     private String inviteCode;
     private String inviteLink;
     private LocalDateTime createdAt;
