@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 @Service
@@ -32,8 +33,8 @@ public class AuthService {
     private final KakaoProperties kakaoProperties;
     private final KakaoTokenService kakaoTokenService;
 
-    public LoginResponse kakaoLogin(String code) {
-        String accessToken = getKakaoAccessToken(code);
+    public LoginResponse kakaoLogin(String code, boolean isDev) {
+        String accessToken = getKakaoAccessToken(code, isDev);
         KakaoUserInfo kakaoUserInfo = getKakaoUserInfo(accessToken);
         User user = userService.getUserOrCreate(kakaoUserInfo);
 
@@ -67,7 +68,10 @@ public class AuthService {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + kakaoAccessToken)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, (request, response) -> {
-                    log.error("카카오 User Info API 호출 실패: {} {}", response.getStatusCode(), response.getBody());
+                    byte[] responseBody = response.getBody().readAllBytes();
+                    String bodyContent = new String(responseBody, StandardCharsets.UTF_8);
+
+                    log.error("카카오 User Info API 호출 실패: {} | 내용: {}", response.getStatusCode(), bodyContent);
                     throw new CustomException(ErrorCode.EXTERNAL_SERVER_ERROR);
                 })
                 .body(KakaoUserInfo.class);
@@ -75,20 +79,23 @@ public class AuthService {
         return userInfo;
     }
 
-    private String getKakaoAccessToken(String code) {
+    private String getKakaoAccessToken(String code, boolean isDev) {
         KakaoTokenResponse tokenResponse = restClient.post()
                 .uri(UriComponentsBuilder
                         .fromUriString(KakaoApiUrl.TOKEN.getUrl())
                         .queryParam("grant_type", "authorization_code")
                         .queryParam("client_id", kakaoProperties.getClientId())
-                        .queryParam("redirect_uri", kakaoProperties.getRedirectUrl())
+                        .queryParam("redirect_uri", isDev ? "http://localhost:3000/v1/oauth2/kakao" : kakaoProperties.getRedirectUrl())
                         .queryParam("client_secret", kakaoProperties.getClientSecret())
                         .queryParam("code", code)
                         .build().toUri())
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, (request, response) -> {
-                    log.error("카카오 Access Token API 호출 실패: {} {}", response.getStatusCode(), response.getBody());
+                    byte[] responseBody = response.getBody().readAllBytes();
+                    String bodyContent = new String(responseBody, StandardCharsets.UTF_8);
+
+                    log.error("카카오 Access Token API 호출 실패: {} {}", response.getStatusCode(), bodyContent);
                     throw new CustomException(ErrorCode.EXTERNAL_SERVER_ERROR);
                 })
                 .body(KakaoTokenResponse.class);
