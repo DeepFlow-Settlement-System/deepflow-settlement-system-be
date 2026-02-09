@@ -46,7 +46,7 @@ public class Room {
         this.group = group;
         this.inviteCode = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         // expiresAt는 사용하지 않지만 DB 제약조건을 위해 최대값 설정
-        this.expiresAt = LocalDateTime.MAX; // 9999-12-31T23:59:59.999999999
+        this.expiresAt = LocalDateTime.now().plusYears(1);
     }
 
     public void setGroup(Group group) {
