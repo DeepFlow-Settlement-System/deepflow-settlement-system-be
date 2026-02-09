@@ -28,7 +28,16 @@ public class AuthController {
             @RequestParam String code
     ) {
         return ResponseEntity.ok(
-                new ApiResponse<>(ApiResponseCode.OK, authService.kakaoLogin(code))
+                new ApiResponse<>(ApiResponseCode.OK, authService.kakaoLogin(code, false))
+        );
+    }
+
+    @GetMapping("/dev/v1/oauth2/kakao")
+    public ResponseEntity<ApiResponse<LoginResponse>> kakaoDevLogin(
+            @RequestParam String code
+    ) {
+        return ResponseEntity.ok(
+                new ApiResponse<>(ApiResponseCode.OK, authService.kakaoLogin(code, true))
         );
     }
 }

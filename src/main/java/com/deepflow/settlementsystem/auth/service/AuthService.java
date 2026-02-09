@@ -33,8 +33,8 @@ public class AuthService {
     private final KakaoProperties kakaoProperties;
     private final KakaoTokenService kakaoTokenService;
 
-    public LoginResponse kakaoLogin(String code) {
-        String accessToken = getKakaoAccessToken(code);
+    public LoginResponse kakaoLogin(String code, boolean isDev) {
+        String accessToken = getKakaoAccessToken(code, isDev);
         KakaoUserInfo kakaoUserInfo = getKakaoUserInfo(accessToken);
         User user = userService.getUserOrCreate(kakaoUserInfo);
 
@@ -79,13 +79,13 @@ public class AuthService {
         return userInfo;
     }
 
-    private String getKakaoAccessToken(String code) {
+    private String getKakaoAccessToken(String code, boolean isDev) {
         KakaoTokenResponse tokenResponse = restClient.post()
                 .uri(UriComponentsBuilder
                         .fromUriString(KakaoApiUrl.TOKEN.getUrl())
                         .queryParam("grant_type", "authorization_code")
                         .queryParam("client_id", kakaoProperties.getClientId())
-                        .queryParam("redirect_uri", kakaoProperties.getRedirectUrl())
+                        .queryParam("redirect_uri", isDev ? "http://localhost:3000/v1/oauth2/kakao" : kakaoProperties.getRedirectUrl())
                         .queryParam("client_secret", kakaoProperties.getClientSecret())
                         .queryParam("code", code)
                         .build().toUri())
