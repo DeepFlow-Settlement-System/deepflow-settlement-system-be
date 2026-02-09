@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 @Service
@@ -67,7 +68,10 @@ public class AuthService {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + kakaoAccessToken)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, (request, response) -> {
-                    log.error("카카오 User Info API 호출 실패: {} {}", response.getStatusCode(), response.getBody());
+                    byte[] responseBody = response.getBody().readAllBytes();
+                    String bodyContent = new String(responseBody, StandardCharsets.UTF_8);
+
+                    log.error("카카오 User Info API 호출 실패: {} | 내용: {}", response.getStatusCode(), bodyContent);
                     throw new CustomException(ErrorCode.EXTERNAL_SERVER_ERROR);
                 })
                 .body(KakaoUserInfo.class);
@@ -88,7 +92,10 @@ public class AuthService {
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, (request, response) -> {
-                    log.error("카카오 Access Token API 호출 실패: {} {}", response.getStatusCode(), response.getBody());
+                    byte[] responseBody = response.getBody().readAllBytes();
+                    String bodyContent = new String(responseBody, StandardCharsets.UTF_8);
+
+                    log.error("카카오 Access Token API 호출 실패: {} {}", response.getStatusCode(), bodyContent);
                     throw new CustomException(ErrorCode.EXTERNAL_SERVER_ERROR);
                 })
                 .body(KakaoTokenResponse.class);
