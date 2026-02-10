@@ -10,5 +10,6 @@ import java.time.LocalDateTime;
 public class MemberResponse {
     private Long id;
     private Long userId;
+    private String nickname;
     private LocalDateTime joinedAt;
 }

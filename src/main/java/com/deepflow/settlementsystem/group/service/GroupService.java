@@ -112,6 +112,7 @@ public class GroupService {
                 .map(member -> MemberResponse.builder()
                         .id(member.getId())
                         .userId(member.getUser().getId())
+                        .nickname(member.getUser().getNickname())
                         .joinedAt(member.getJoinedAt())
                         .build())
                 .collect(Collectors.toList());
